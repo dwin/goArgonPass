@@ -1,5 +1,17 @@
 // Package argonpass provides passphrase hashing and hash verification using the Argon2
 // password hashing method.
+//
+// The default Argon2 function is ```Argon2id```, which is a hybrid version of Argon2 combining
+// Argon2i and Argon2d. Argon2id is side-channel resistant and provides better brute- force cost
+// savings due to time-memory tradeoffs than Argon2i, but Argon2i is still plenty secure.
+//
+// The string input/output format was designed to be compatible with
+// [Passlib for Python](https://passlib.readthedocs.io/en/stable/lib/passlib.hash.argon2.html) and
+// [Argon2 PHP](https://wiki.php.net/rfc/argon2_password_hash), and you should have full compatibility
+// using the ```argon2i``` function, but will not be able to use ```argon2id```, which is the default
+// for this pacakge until those libraries are updated to support it. I encourage you to find the parameters
+// that work best for your application, but the defaults are resonable for an interactive use
+// such as a web application login.
 package argonpass
 
 import (
