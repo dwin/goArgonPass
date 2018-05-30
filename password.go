@@ -9,7 +9,7 @@
 // [Passlib for Python](https://passlib.readthedocs.io/en/stable/lib/passlib.hash.argon2.html) and
 // [Argon2 PHP](https://wiki.php.net/rfc/argon2_password_hash), and you should have full compatibility
 // using the ```argon2i``` function, but will not be able to use ```argon2id```, which is the default
-// for this pacakge until those libraries are updated to support it. I encourage you to find the parameters
+// for this package until those libraries are updated to support it. I encourage you to find the parameters
 // that work best for your application, but the defaults are resonable for an interactive use
 // such as a web application login.
 package argonpass
