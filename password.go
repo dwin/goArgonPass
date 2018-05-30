@@ -1,3 +1,5 @@
+// Package argonpass provides passphrase hashing and hash verification using the Argon2
+// password hashing method.
 package argonpass
 
 import (
