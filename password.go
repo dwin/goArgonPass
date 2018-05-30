@@ -70,7 +70,7 @@ func Hash(pass string, customParams ...ArgonParams) (string, error) {
 	encodedSalt := base64.StdEncoding.EncodeToString(salt)
 
 	// Format output string
-	// $argon2{function}$v={version}$m={memory},t={time},p={parallelism}${salt(base64)}${digest(base64)}
+	// $argon2{function(i or id)}$v={version}$m={memory},t={time},p={parallelism}${salt(base64)}${digest(base64)}
 	// example: $argon2id$v=19$m=65536,t=2,p=4$c29tZXNhbHQ$RdescudvJCsgt3ub+b+dWRWJTmaaJObG
 	return fmt.Sprintf("$%s$v=%v$m=%v,t=%v,p=%v$%s$%s", params.Function, currentVersion, params.Memory, params.Time, params.Threads, encodedSalt, encodedHash), nil
 }
@@ -99,8 +99,6 @@ func Verify(pass, hash string) error {
 		hashParams.Function = "argon2i"
 	case "argon2id":
 		hashParams.Function = "argon2id"
-	default:
-		return ErrFunctionMismatch
 	}
 
 	// Get & Check Version
@@ -131,7 +129,7 @@ func Verify(pass, hash string) error {
 	// Generate hash for comparison using user input with stored parameters
 	comparisonHash, err := generateHash([]byte(pass), salt, hashParams)
 	if err != nil {
-		return err
+		return fmt.Errorf("Unable to generate hash for comparison using inputs, error: %s", err)
 	}
 
 	// Compare given hash input to generated hash
@@ -151,7 +149,7 @@ func Verify(pass, hash string) error {
 func generateSalt(saltLen int) ([]byte, error) {
 	salt := make([]byte, saltLen)
 	if _, err := io.ReadFull(rand.Reader, salt); err != nil {
-		return salt, ErrSaltGen
+		return salt, fmt.Errorf("Unable to generate random salt needed for crypto operations, error: %s", err)
 	}
 	return salt, nil
 }
@@ -196,16 +194,11 @@ func parseParams(inputParams string) (out ArgonParams, err error) {
 func Benchmark(params ArgonParams) (elapsed float64, err error) {
 	pass := "benchmarkpass"
 	start := time.Now()
+
 	salt, err := generateSalt(defaultSaltSize)
-	if err != nil {
-		return 0, err
-	}
 	_, err = generateHash([]byte(pass), salt, params)
-	if err != nil {
-		return 0, err
-	}
+
 	t := time.Now()
 	dur := t.Sub(start)
 	return dur.Seconds(), err
-
 }

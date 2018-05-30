@@ -32,10 +32,15 @@ func randSeq(n int) string {
 	}
 	return string(b)
 }
-func TestHashShortPass(t *testing.T) {
+func TestHash(t *testing.T) {
 	// Test Short Pass
 	_, err := Hash("1234567")
 	assert.EqualError(t, err, ErrPassphraseInputTooShort.Error())
+
+	// Test Too Many Custom Params
+	_, err = Hash("password", ArgonParams{Time: 0}, ArgonParams{Memory: 0})
+	assert.EqualError(t, err, ErrCustomParameters.Error())
+
 	fmt.Println(" - " + t.Name() + " complete - ")
 }
 
@@ -46,6 +51,7 @@ func TestRandSeq(t *testing.T) {
 }
 
 func TestVerify(t *testing.T) {
+	// Test Verify using testdata
 	for pass, hash := range testdata {
 		err := Verify(pass, hash)
 		assert.Nil(t, err)
@@ -53,15 +59,56 @@ func TestVerify(t *testing.T) {
 			fmt.Printf("Verification failed for pass: %s with hash: %s\n", pass, hash)
 		}
 	}
+
+	// Test Verify using testdata hashes and invalid passphrases
+	for _, hash := range testdata {
+		err := Verify("invalid_pass", hash)
+		assert.EqualError(t, err, ErrHashMismatch.Error())
+	}
+
+	// Test Verify with bad hash string input
+	err := Verify("password", "$argon2id$v=19$m=65536,t=10$p=4$wusfaUEXfbhsz9R3+PI9nQ==$54an1yiYbCEfTtUzE0Lb536IcyP5CGpEvsO1agp2aZQ=")
+	assert.EqualError(t, err, ErrInvalidHashFormat.Error())
+
+	// Test Verify with Invalid hash function
+	err = Verify("password", "$argon2bi$v=19$m=65536,t=10,p=4$wusfaUEXfbhsz9R3+PI9nQ==$54an1yiYbCEfTtUzE0Lb536IcyP5CGpEvsO1agp2aZQ=")
+	assert.EqualError(t, err, ErrInvalidHashFormat.Error())
+
+	// Test Verify with Invalid version
+	err = Verify("password", "$argon2i$v=99$m=65536,t=10,p=4$wusfaUEXfbhsz9R3+PI9nQ==$54an1yiYbCEfTtUzE0Lb536IcyP5CGpEvsO1agp2aZQ=")
+	assert.EqualError(t, err, ErrVersion.Error())
+
+	// Test Verify with malformed/invalid salt
+	err = Verify("password", "$argon2i$v=19$m=65536,t=10,p=4$wusfaUEXf@hsz9R3+PI9nQ==$54an1yiYbCEfTtUzE0Lb536IcyP5CGpEvsO1agp2aZQ=")
+	assert.EqualError(t, err, ErrDecodingSalt.Error())
+
+	// Test Verify with malformed/invalid digest
+	err = Verify("password", "$argon2i$v=19$m=65536,t=10,p=4$wusfaUEXfbhsz9R3+PI9nQ==$54an1yiYbCEfTtUzE0Lb53#IcyP5CGpEvsO1agp2aZQ=")
+	assert.EqualError(t, err, ErrDecodingHash.Error())
+
 	fmt.Println(" - " + t.Name() + " complete - ")
 }
 
 func TestGenerateHash(t *testing.T) {
+	// Test regeneration with expected output
 	salt, _ := base64.StdEncoding.DecodeString("AXLonWF8MSgG515yMlIRSw==")
-	out, err := generateHash([]byte("testpass"), salt, ArgonParams{Time: 12, Memory: 64 * 1024, Threads: 4, OutputSize: 32, Function: "argon2id"})
+	testpass := []byte("testpass")
+	out, err := generateHash(testpass, salt, ArgonParams{Time: 12, Memory: 64 * 1024, Threads: 4, OutputSize: 32, Function: "argon2id"})
 	assert.Nil(t, err)
 	assert.EqualValues(t, "+iExTQDCJnO4fErO61zMAeC24R3utWMk8tW85saXOBU=", base64.StdEncoding.EncodeToString(out))
+
+	// Test invalid function choice
+	_, err = generateHash(testpass, salt, ArgonParams{Time: 12, Memory: 64 * 1024, Threads: 4, OutputSize: 32, Function: "argon2b"})
+	assert.EqualError(t, err, ErrFunctionMismatch.Error())
+
 	fmt.Println(" - " + t.Name() + " complete - ")
+}
+
+func TestGenerateSalt(t *testing.T) {
+	expectedLen := 20
+	salt, err := generateSalt(expectedLen)
+	assert.Nil(t, err)
+	assert.Len(t, salt, expectedLen)
 }
 
 func TestHashAndVerify(t *testing.T) {
@@ -84,6 +131,27 @@ func TestHashAndVerify(t *testing.T) {
 		err = Verify(pass, out)
 		assert.Nil(t, err)
 	}
+	fmt.Println(" - " + t.Name() + " complete - ")
+}
+
+func TestParseParams(t *testing.T) {
+	expected := ArgonParams{
+		Time:    2,
+		Memory:  65536,
+		Threads: 4,
+	}
+	params, err := parseParams("m=65536,t=2,p=4")
+	assert.Nil(t, err)
+	assert.Equal(t, expected, params)
+
+	// Test with bad params, these should not happen in regular use since these would fail regex
+	_, err = parseParams("m=65.536,t=2,p=4")
+	assert.EqualError(t, err, ErrParseMemory.Error())
+	_, err = parseParams("m=65536,t=2b,p=4")
+	assert.EqualError(t, err, ErrParseTime.Error())
+	_, err = parseParams("m=65536,t=2,p=4h")
+	assert.EqualError(t, err, ErrParseParallelism.Error())
+
 	fmt.Println(" - " + t.Name() + " complete - ")
 }
 

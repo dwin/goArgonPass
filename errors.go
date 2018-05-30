@@ -4,8 +4,6 @@ import "errors"
 
 var (
 	ErrCustomParameters = errors.New("Parameters passed to hash are invalid")
-	//ErrSaltGen indicates there has been an error generating the random salt for hashing
-	ErrSaltGen = errors.New("Error generating random salt")
 
 	ErrPassphraseInputTooShort = errors.New("Passphrase Input too short, must be > 0 characters")
 	// ErrVersion indicates the version could not be found in hash string or version of hash is
@@ -26,5 +24,5 @@ var (
 
 	ErrHashMismatch = errors.New("Unable to verify passphrase input with given hash value")
 
-	ErrInvalidHashFormat = errors.New("Invalid hash format, hash should be in form of '$argon2{function}$v={version}$m={memory},t={time},p={parallelism}${salt(base64)}${digest(base64)}'")
+	ErrInvalidHashFormat = errors.New("Invalid hash format, hash should be in form of '$argon2{function(i or id)}$v={version}$m={memory},t={time},p={parallelism}${salt(base64)}${digest(base64)}'")
 )
