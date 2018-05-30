@@ -16,24 +16,29 @@ import (
 )
 
 const (
-	algo            = "argon2i"
-	currentVersion  = argon2.Version
-	defaultSaltSize = 16
-	minPassLength   = 8
+	argon2i        = "argon2i"
+	argon2id       = "argon2id"
+	currentVersion = argon2.Version
+	minPassLength  = 8
+	minSaltSize    = 8
+	minTime        = 1
+	minMemory      = 1 << 10
+	minParallelism = 1
+	minOutputSize  = 16 // minimum Argon2 digest output size only
 )
 
 var (
-	defaultParams = ArgonParams{Time: 10, Memory: 64 * 1024, Threads: 4, OutputSize: 32, Function: "argon2id"}
-	functions     = []string{"argon2i", "argon2id"}
+	defaultParams = ArgonParams{Time: 1, Memory: 64 * 1024, Parallelism: 4, OutputSize: 32, Function: argon2id, SaltSize: 8}
 )
 
 // ArgonParams control how the Argon2 function creates the digest output
 type ArgonParams struct {
-	Time       uint32
-	Memory     uint32
-	Threads    uint8
-	OutputSize uint32
-	Function   string
+	Time        uint32
+	Memory      uint32
+	Parallelism uint8
+	OutputSize  uint32
+	Function    string
+	SaltSize    uint8
 }
 
 // Hash generates a argon2id hash of the input pass string with default settings
@@ -50,12 +55,31 @@ func Hash(pass string, customParams ...ArgonParams) (string, error) {
 		params = defaultParams
 	case 1:
 		params = customParams[0]
+		// Enforce Minimum Params
+		if params.SaltSize < minSaltSize {
+			params.SaltSize = minSaltSize
+		}
+		if params.Time < minTime {
+			params.Time = minTime
+		}
+		if params.Memory < minMemory {
+			params.Memory = minMemory
+		}
+		if params.Parallelism < minParallelism {
+			params.Parallelism = minParallelism
+		}
+		if params.OutputSize < minOutputSize {
+			params.OutputSize = minOutputSize
+		}
+		if params.Function != argon2i && params.Function != argon2id {
+			params.Function = argon2id
+		}
 	default:
 		return "", ErrCustomParameters
 	}
 
 	// Generate random salt
-	salt, err := generateSalt(defaultSaltSize)
+	salt, err := generateSalt(params.SaltSize)
 	if err != nil {
 		return "", err
 	}
@@ -74,7 +98,7 @@ func Hash(pass string, customParams ...ArgonParams) (string, error) {
 	// Format output string
 	// $argon2{function(i or id)}$v={version}$m={memory},t={time},p={parallelism}${salt(base64)}${digest(base64)}
 	// example: $argon2id$v=19$m=65536,t=2,p=4$c29tZXNhbHQ$RdescudvJCsgt3ub+b+dWRWJTmaaJObG
-	return fmt.Sprintf("$%s$v=%v$m=%v,t=%v,p=%v$%s$%s", params.Function, currentVersion, params.Memory, params.Time, params.Threads, encodedSalt, encodedHash), nil
+	return fmt.Sprintf("$%s$v=%v$m=%v,t=%v,p=%v$%s$%s", params.Function, currentVersion, params.Memory, params.Time, params.Parallelism, encodedSalt, encodedHash), nil
 }
 
 // Verify regenerates the hash using the supplied pass and compares the value returning an error if the password
@@ -97,10 +121,10 @@ func Verify(pass, hash string) error {
 
 	// Check hash function
 	switch part[1] {
-	case "argon2i":
-		hashParams.Function = "argon2i"
-	case "argon2id":
-		hashParams.Function = "argon2id"
+	case argon2i:
+		hashParams.Function = argon2i
+	case argon2id:
+		hashParams.Function = argon2id
 	}
 
 	// Get & Check Version
@@ -148,7 +172,7 @@ func Verify(pass, hash string) error {
 }
 
 // generateSalt uses int input to return a random a salt for use in crypto operations
-func generateSalt(saltLen int) ([]byte, error) {
+func generateSalt(saltLen uint8) ([]byte, error) {
 	salt := make([]byte, saltLen)
 	if _, err := io.ReadFull(rand.Reader, salt); err != nil {
 		return salt, fmt.Errorf("Unable to generate random salt needed for crypto operations, error: %s", err)
@@ -159,10 +183,10 @@ func generateSalt(saltLen int) ([]byte, error) {
 // generateHash takes passphrase and salt as bytes with parameters to provide Argon2 digest output
 func generateHash(pass, salt []byte, params ArgonParams) ([]byte, error) {
 	switch params.Function {
-	case "argon2i":
-		return argon2.Key(pass, salt, params.Time, params.Memory, params.Threads, params.OutputSize), nil
-	case "argon2id":
-		return argon2.IDKey(pass, salt, params.Time, params.Memory, params.Threads, params.OutputSize), nil
+	case argon2i:
+		return argon2.Key(pass, salt, params.Time, params.Memory, params.Parallelism, params.OutputSize), nil
+	case argon2id:
+		return argon2.IDKey(pass, salt, params.Time, params.Memory, params.Parallelism, params.OutputSize), nil
 	default:
 		return nil, ErrFunctionMismatch
 	}
@@ -181,13 +205,13 @@ func parseParams(inputParams string) (out ArgonParams, err error) {
 	if err != nil {
 		return out, ErrParseTime
 	}
-	threads, err := strconv.Atoi(strings.TrimPrefix(part[2], "p="))
+	parallelism, err := strconv.Atoi(strings.TrimPrefix(part[2], "p="))
 	if err != nil {
 		return out, ErrParseParallelism
 	}
 	out.Memory = uint32(mem)
 	out.Time = uint32(timeCost)
-	out.Threads = uint8(threads)
+	out.Parallelism = uint8(parallelism)
 
 	return out, err
 }
@@ -197,7 +221,7 @@ func Benchmark(params ArgonParams) (elapsed float64, err error) {
 	pass := "benchmarkpass"
 	start := time.Now()
 
-	salt, err := generateSalt(defaultSaltSize)
+	salt, err := generateSalt(params.SaltSize)
 	_, err = generateHash([]byte(pass), salt, params)
 
 	t := time.Now()
