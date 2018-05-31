@@ -33,10 +33,13 @@ const (
 	currentVersion = argon2.Version
 	minPassLength  = 8
 	minSaltSize    = 8
+	maxSaltSize    = 64
 	minTime        = 1
 	minMemory      = 1 << 10
 	minParallelism = 1
 	minOutputSize  = 16 // minimum Argon2 digest output size only
+	maxOutputSize  = 512
+	maxParallelism = 64
 )
 
 var (
@@ -66,26 +69,7 @@ func Hash(pass string, customParams ...ArgonParams) (string, error) {
 	case 0:
 		params = defaultParams
 	case 1:
-		params = customParams[0]
-		// Enforce Minimum Params
-		if params.SaltSize < minSaltSize {
-			params.SaltSize = minSaltSize
-		}
-		if params.Time < minTime {
-			params.Time = minTime
-		}
-		if params.Memory < minMemory {
-			params.Memory = minMemory
-		}
-		if params.Parallelism < minParallelism {
-			params.Parallelism = minParallelism
-		}
-		if params.OutputSize < minOutputSize {
-			params.OutputSize = minOutputSize
-		}
-		if params.Function != argon2i && params.Function != argon2id {
-			params.Function = argon2id
-		}
+		params = checkParams(customParams[0])
 	default:
 		return "", ErrCustomParameters
 	}
@@ -110,16 +94,20 @@ func Hash(pass string, customParams ...ArgonParams) (string, error) {
 	// Format output string
 	// $argon2{function(i or id)}$v={version}$m={memory},t={time},p={parallelism}${salt(base64)}${digest(base64)}
 	// example: $argon2id$v=19$m=65536,t=2,p=4$c29tZXNhbHQ$RdescudvJCsgt3ub+b+dWRWJTmaaJObG
-	return fmt.Sprintf("$%s$v=%v$m=%v,t=%v,p=%v$%s$%s", params.Function, currentVersion, params.Memory, params.Time, params.Parallelism, encodedSalt, encodedHash), nil
+	hashOut := fmt.Sprintf("$%s$v=%v$m=%v,t=%v,p=%v$%s$%s", params.Function, currentVersion, params.Memory, params.Time, params.Parallelism, encodedSalt, encodedHash)
+	// Check valid output
+	if err := checkHashFormat(hashOut); err != nil {
+		return "", fmt.Errorf("Hash output failed validation check parameters if custom, error: %s", err)
+	}
+	return hashOut, nil
 }
 
 // Verify regenerates the hash using the supplied pass and compares the value returning an error if the password
 // is invalid or another error occurs. Any error should be considered a validation failure.
 func Verify(pass, hash string) error {
 	// Check valid input
-	valid := regexp.MustCompile(`[$]argon2(?:id|i)[$]v=\d\d[$]m=\d{3,12},t=\d{1,4},p=\d{1,2}[$][^$]{1,64}[$][^$]{1,128}`)
-	if !valid.MatchString(hash) {
-		return ErrInvalidHashFormat
+	if err := checkHashFormat(hash); err != nil {
+		return err
 	}
 
 	// Split hash into parts
@@ -183,6 +171,16 @@ func Verify(pass, hash string) error {
 
 }
 
+// checkHashFormat uses regex to validate hash string pattern and returns error
+func checkHashFormat(hash string) error {
+	// Check valid input
+	valid := regexp.MustCompile(`[$]argon2(?:id|i)[$]v=\d\d[$]m=\d{3,12},t=\d{1,4},p=\d{1,2}[$][^$]{1,100}[$][^$]{1,768}`)
+	if !valid.MatchString(hash) {
+		return ErrInvalidHashFormat
+	}
+	return nil
+}
+
 // generateSalt uses int input to return a random a salt for use in crypto operations
 func generateSalt(saltLen uint8) ([]byte, error) {
 	salt := make([]byte, saltLen)
@@ -226,6 +224,40 @@ func parseParams(inputParams string) (out ArgonParams, err error) {
 	out.Parallelism = uint8(parallelism)
 
 	return out, err
+}
+
+// checkParams verifies that parameters fall within min and max allowed values
+func checkParams(params ArgonParams) ArgonParams {
+	// Enforce Minimum Params
+	if params.SaltSize < minSaltSize {
+		params.SaltSize = minSaltSize
+	}
+	if params.Time < minTime {
+		params.Time = minTime
+	}
+	if params.Memory < minMemory {
+		params.Memory = minMemory
+	}
+	if params.Parallelism < minParallelism {
+		params.Parallelism = minParallelism
+	}
+	if params.OutputSize < minOutputSize {
+		params.OutputSize = minOutputSize
+	}
+	// Enforce Max Params
+	if params.SaltSize > maxSaltSize {
+		params.SaltSize = maxSaltSize
+	}
+	if params.OutputSize > maxOutputSize {
+		params.OutputSize = maxOutputSize
+	}
+	if params.Parallelism > maxParallelism {
+		params.Parallelism = maxParallelism
+	}
+	if params.Function != argon2i && params.Function != argon2id {
+		params.Function = argon2id
+	}
+	return params
 }
 
 // Benchmark takes ArgonParams and returns the number of seconds elapsed as a float64 and error

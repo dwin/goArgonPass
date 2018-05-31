@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"math/rand"
+	"strings"
 	"testing"
 	"time"
 
@@ -43,8 +44,24 @@ func TestHash(t *testing.T) {
 
 	// Test below min custom params
 	out, err := Hash("password", ArgonParams{})
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Contains(t, out, "$argon2id$v=19$m=1024,t=1,p=1")
+
+	// Test above max params, should be forced to max
+	out, err = Hash("password", ArgonParams{SaltSize: 100, OutputSize: 600})
+	assert.NoError(t, err)
+	if err != nil {
+		t.FailNow()
+	}
+	part := strings.Split(out, "$")
+	// Get salt, check was set to max Salt Size
+	salt, err := base64.StdEncoding.DecodeString(part[4])
+	assert.NoError(t, err)
+	assert.Len(t, salt, maxSaltSize)
+	// Get argon digest, check was set to max Output Size
+	decodedHash, err := base64.StdEncoding.DecodeString(part[5])
+	assert.NoError(t, err)
+	assert.Len(t, decodedHash, maxOutputSize)
 
 	fmt.Println(" - " + t.Name() + " complete - ")
 }
@@ -59,7 +76,7 @@ func TestVerify(t *testing.T) {
 	// Test Verify using testdata
 	for pass, hash := range testdata {
 		err := Verify(pass, hash)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		if err != nil {
 			fmt.Printf("Verification failed for pass: %s with hash: %s\n", pass, hash)
 		}
@@ -94,12 +111,31 @@ func TestVerify(t *testing.T) {
 	fmt.Println(" - " + t.Name() + " complete - ")
 }
 
+func TestCheckParams(t *testing.T) {
+	params := checkParams(ArgonParams{SaltSize: 100, OutputSize: 600})
+	assert.EqualValues(t, maxSaltSize, params.SaltSize)
+	assert.EqualValues(t, maxOutputSize, params.OutputSize)
+	assert.EqualValues(t, minMemory, params.Memory)
+	assert.EqualValues(t, minTime, params.Time)
+	assert.EqualValues(t, argon2id, params.Function)
+	assert.EqualValues(t, minParallelism, params.Parallelism)
+}
+func TestCheckHashFormat(t *testing.T) {
+	// Check bad hash format
+	err := checkHashFormat("$argon2id$v=19$m=65536,t=10$p=4$wusfaUEXfbhsz9R3+PI9nQ==$54an1yiYbCEfTtUzE0Lb536IcyP5CGpEvsO1agp2aZQ=")
+	assert.EqualError(t, err, ErrInvalidHashFormat.Error())
+	// Check valid hash format
+	err = checkHashFormat("$argon2id$v=19$m=65536,t=1,p=4$in2Oi1x57p0=$FopwSR12aLJ9OGPw1rKU5K5osAOGxOJzxC/shk+i850=")
+	assert.NoError(t, err)
+
+	fmt.Println(" - " + t.Name() + " complete - ")
+}
 func TestGenerateHash(t *testing.T) {
 	// Test regeneration with expected output
 	salt, _ := base64.StdEncoding.DecodeString("AXLonWF8MSgG515yMlIRSw==")
 	testpass := []byte("testpass")
 	out, err := generateHash(testpass, salt, ArgonParams{Time: 12, Memory: 64 * 1024, Parallelism: 4, OutputSize: 32, Function: "argon2id"})
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.EqualValues(t, "+iExTQDCJnO4fErO61zMAeC24R3utWMk8tW85saXOBU=", base64.StdEncoding.EncodeToString(out))
 
 	// Test invalid function choice
@@ -112,7 +148,7 @@ func TestGenerateHash(t *testing.T) {
 func TestGenerateSalt(t *testing.T) {
 	expectedLen := 20
 	salt, err := generateSalt(uint8(expectedLen))
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Len(t, salt, expectedLen)
 }
 
@@ -121,20 +157,20 @@ func TestHashAndVerify(t *testing.T) {
 	for i := 8; i < 256; i *= 3 {
 		pass := randSeq(i)
 		out, err := Hash(pass)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.NotEmpty(t, out)
 		err = Verify(pass, out)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 	}
 
 	// Hash & Verify with Custom Params
 	for i := 8; i < 256; i *= 3 {
 		pass := randSeq(i)
 		out, err := Hash(pass, ArgonParams{Time: 12, Memory: 64 * 1024, Parallelism: 4, OutputSize: 32, Function: "argon2id"})
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.NotEmpty(t, out)
 		err = Verify(pass, out)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 	}
 	fmt.Println(" - " + t.Name() + " complete - ")
 }
@@ -146,7 +182,7 @@ func TestParseParams(t *testing.T) {
 		Parallelism: 4,
 	}
 	params, err := parseParams("m=65536,t=2,p=4")
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, expected, params)
 
 	// Test with bad params, these should not happen in regular use since these would fail regex
@@ -165,7 +201,7 @@ func TestBenchmark(t *testing.T) {
 	var totalDuration float64
 	for totalDuration < 5 {
 		singleDuration, err := Benchmark(defaultParams)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		totalDuration += singleDuration
 		count++
 	}
