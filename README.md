@@ -57,3 +57,17 @@ $argon2id$v=19$m=65536,t=1,p=4$in2Oi1x57p0=$FopwSR12aLJ9OGPw1rKU5K5osAOGxOJzxC/s
 $argon2{function(i/id)}$v={version}$m={memory},t={time},p={parallelism}${salt(base64)}${digest(base64)}
 ```
 
+### Other Notes
+
+Set Custom Parameters by passing ArgonParams{} to Hash().
+
+```
+type ArgonParams struct {
+	Time        uint32
+	Memory      uint32
+	Parallelism uint8
+	OutputSize  uint32
+	Function    string
+	SaltSize    uint8
+}
+```
