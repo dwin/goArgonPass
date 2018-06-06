@@ -1,10 +1,8 @@
 # goArgonPass
 
-[![GoDoc](https://godoc.org/gitlab.com/dwin/goArgonPass?status.svg)](https://godoc.org/gitlab.com/dwin/goArgonPass)
-[![cover.run](https://cover.run/go/gitlab.com/dwin/goArgonPass.svg?style=flat&tag=golang-1.10)](https://cover.run/go?tag=golang-1.10&repo=gitlab.com%2Fdwin%2FgoArgonPass)
-[![pipeline status](https://gitlab.com/dwin/goArgonPass/badges/master/pipeline.svg)](https://gitlab.com/dwin/goArgonPass/commits/master)
-[![coverage report](https://gitlab.com/dwin/goArgonPass/badges/master/coverage.svg)](https://gitlab.com/dwin/goArgonPass/commits/master)
-[![Go Report Card](https://goreportcard.com/badge/gitlab.com/dwin/goArgonPass)](https://goreportcard.com/report/gitlab.com/dwin/goArgonPass)
+[![GoDoc](https://godoc.org/github.com/dwin/goArgonPass?status.svg)](https://godoc.org/github.com/dwin/goArgonPass)
+[![cover.run](https://cover.run/go/github.com/dwin/goArgonPass.svg?style=flat&tag=golang-1.10)](https://cover.run/go?tag=golang-1.10&repo=github.com%2Fdwin%2FgoArgonPass)
+[![Go Report Card](https://goreportcard.com/badge/github.com/dwin/goArgonPass)](https://goreportcard.com/report/github.com/dwin/goArgonPass)
 
 **_All hashing and crypto is done by Go library packages. This is only a utility package to make the process described easier._**
 
@@ -19,16 +17,16 @@ The default Argon2 function is ```Argon2id```, which is a hybrid version of Argo
 
 ## Get Started
 ```
-go get gitlab.com/dwin/goArgonPass
+go get github.com/dwin/goArgonPass
 ```
 
-See [example/example.go](https://gitlab.com/dwin/goArgonPass/blob/master/example/example.go):
+See [example/example.go](https://github.com/dwin/goArgonPass/blob/master/example/example.go):
 ```go
 import (
 	"fmt"
 	"os"
 
-	"gitlab.com/dwin/goArgonPass"
+	"github.com/dwin/goArgonPass"
 )
 
 func main() {
