@@ -20,8 +20,8 @@ var (
 	// ErrDecodingSalt indicates there was an issue converting the expected base64 salt to bytes
 	ErrDecodingSalt = errors.New("Unable to decode salt base64 to byte")
 
-	// ErrDecodingHash indicates there was an issue converting the expected base64 hash digest to bytes
-	ErrDecodingHash = errors.New("Unable to decode passhash base64 to byte")
+	// ErrDecodingDigest indicates there was an issue converting the expected base64 hash digest to bytes
+	ErrDecodingDigest = errors.New("Unable to decode passhash digest base64 to byte")
 
 	// ErrParseTime indicates there was an issue parsing the time parameter from the hash
 	// input string, possibly was not expected integer value

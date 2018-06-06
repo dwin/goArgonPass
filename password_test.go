@@ -43,12 +43,12 @@ func TestHash(t *testing.T) {
 	assert.EqualError(t, err, ErrCustomParameters.Error())
 
 	// Test below min custom params
-	out, err := Hash("password", ArgonParams{})
+	out, err := Hash("password", ArgonParams{Function: argon2i})
 	assert.NoError(t, err)
-	assert.Contains(t, out, "$argon2id$v=19$m=1024,t=1,p=1")
+	assert.Contains(t, out, "$argon2i$v=19$m=1024,t=1,p=1")
 
 	// Test above max params, should be forced to max
-	out, err = Hash("password", ArgonParams{SaltSize: 100, OutputSize: 600})
+	out, err = Hash("password", ArgonParams{SaltSize: 100, OutputSize: 600, Function: argon2i})
 	assert.NoError(t, err)
 	if err != nil {
 		t.FailNow()
@@ -62,6 +62,11 @@ func TestHash(t *testing.T) {
 	decodedHash, err := base64.StdEncoding.DecodeString(part[5])
 	assert.NoError(t, err)
 	assert.Len(t, decodedHash, maxOutputSize)
+
+	// Test invalid function choice
+	hash, err := Hash("password", ArgonParams{Time: 1, Memory: 16 * 1024, Parallelism: 4, OutputSize: 32, Function: "argon2b"})
+	assert.EqualError(t, err, ErrFunctionMismatch.Error())
+	assert.Empty(t, hash)
 
 	fmt.Println(" - " + t.Name() + " complete - ")
 }
@@ -88,37 +93,79 @@ func TestVerify(t *testing.T) {
 		assert.EqualError(t, err, ErrHashMismatch.Error())
 	}
 
+	// Test Verify with bad salt
+	err := Verify("password", "$argon2i$v=19$m=65536,t=5,p=4$=$m6zc3AIQbGZOSv3grFtlquTUXXKdyfmCvrmKJ4cQf7E=")
+	assert.EqualError(t, err, ErrDecodingSalt.Error())
+	assert.NotNil(t, err)
+
+	// Test Verify with bad digest
+	err = Verify("password", "$argon2i$v=19$m=65536,t=5,p=4$MrcQyTq/if2OH2G5+YPKig==$=")
+	assert.EqualError(t, err, ErrDecodingDigest.Error())
+	assert.NotNil(t, err)
+
 	// Test Verify with bad hash string input
-	err := Verify("password", "$argon2id$v=19$m=65536,t=10$p=4$wusfaUEXfbhsz9R3+PI9nQ==$54an1yiYbCEfTtUzE0Lb536IcyP5CGpEvsO1agp2aZQ=")
+	err = Verify("password", "$argon2id$v=19$m=65536,t=10$p=4$wusfaUEXfbhsz9R3+PI9nQ==$54an1yiYbCEfTtUzE0Lb536IcyP5CGpEvsO1agp2aZQ=")
 	assert.EqualError(t, err, ErrInvalidHashFormat.Error())
+	assert.NotNil(t, err)
 
 	// Test Verify with Invalid hash function
 	err = Verify("password", "$argon2bi$v=19$m=65536,t=10,p=4$wusfaUEXfbhsz9R3+PI9nQ==$54an1yiYbCEfTtUzE0Lb536IcyP5CGpEvsO1agp2aZQ=")
 	assert.EqualError(t, err, ErrInvalidHashFormat.Error())
+	assert.NotNil(t, err)
 
 	// Test Verify with Invalid version
 	err = Verify("password", "$argon2i$v=99$m=65536,t=10,p=4$wusfaUEXfbhsz9R3+PI9nQ==$54an1yiYbCEfTtUzE0Lb536IcyP5CGpEvsO1agp2aZQ=")
 	assert.EqualError(t, err, ErrVersion.Error())
+	assert.NotNil(t, err)
 
 	// Test Verify with malformed/invalid salt
 	err = Verify("password", "$argon2i$v=19$m=65536,t=10,p=4$wusfaUEXf@hsz9R3+PI9nQ==$54an1yiYbCEfTtUzE0Lb536IcyP5CGpEvsO1agp2aZQ=")
 	assert.EqualError(t, err, ErrDecodingSalt.Error())
+	assert.NotNil(t, err)
+
+	// Test Verify with malformed/invalid salt
+	err = Verify("password", "$argon2i$v=19$m=65536,t=5,p=4$MrcQyTq/if?OH2G5+YPKig==$m6zc3AIQbGZOSv3grFtlquTUXXKdyfmCvrmKJ4cQf7E=")
+	assert.EqualError(t, err, ErrDecodingSalt.Error())
+	assert.NotNil(t, err)
 
 	// Test Verify with malformed/invalid digest
 	err = Verify("password", "$argon2i$v=19$m=65536,t=10,p=4$wusfaUEXfbhsz9R3+PI9nQ==$54an1yiYbCEfTtUzE0Lb53#IcyP5CGpEvsO1agp2aZQ=")
-	assert.EqualError(t, err, ErrDecodingHash.Error())
+	assert.EqualError(t, err, ErrDecodingDigest.Error())
+	assert.NotNil(t, err)
+
+	// Test Verify with malformed/invalid digest
+	err = Verify("password", "$argon2i$v=19$m=65536,t=5,p=4$MrcQyTq/ifOH2G5+YPKig==$m6zc3AIQbGZOSv3grFtlquTUX*XKdyfmCvrmKJ4cQf7E=")
+	assert.EqualError(t, err, ErrDecodingSalt.Error())
+	assert.NotNil(t, err)
 
 	fmt.Println(" - " + t.Name() + " complete - ")
 }
 
+func TestGetParams(t *testing.T) {
+	// Test GetParams using testdata hashes
+	for _, hash := range testdata {
+		params, err := GetParams(hash)
+		assert.NoError(t, err)
+		assert.NotZero(t, params.Memory)
+		assert.NotZero(t, params.Parallelism)
+		assert.NotZero(t, params.Time)
+		assert.NotZero(t, params.OutputSize)
+		assert.NotZero(t, params.SaltSize)
+	}
+
+	fmt.Println(" - " + t.Name() + " complete - ")
+}
 func TestCheckParams(t *testing.T) {
 	params := checkParams(ArgonParams{SaltSize: 100, OutputSize: 600})
 	assert.EqualValues(t, maxSaltSize, params.SaltSize)
 	assert.EqualValues(t, maxOutputSize, params.OutputSize)
 	assert.EqualValues(t, minMemory, params.Memory)
 	assert.EqualValues(t, minTime, params.Time)
-	assert.EqualValues(t, argon2id, params.Function)
 	assert.EqualValues(t, minParallelism, params.Parallelism)
+	assert.Empty(t, params.Function)
+	// Check Max Parameters
+	params = checkParams(ArgonParams{Parallelism: 100})
+	assert.EqualValues(t, maxParallelism, params.Parallelism)
 }
 func TestCheckHashFormat(t *testing.T) {
 	// Check bad hash format
@@ -139,22 +186,25 @@ func TestGenerateHash(t *testing.T) {
 	assert.EqualValues(t, "+iExTQDCJnO4fErO61zMAeC24R3utWMk8tW85saXOBU=", base64.StdEncoding.EncodeToString(out))
 
 	// Test invalid function choice
-	_, err = generateHash(testpass, salt, ArgonParams{Time: 12, Memory: 64 * 1024, Parallelism: 4, OutputSize: 32, Function: "argon2b"})
+	hash, err := generateHash(testpass, salt, ArgonParams{Time: 1, Memory: 16 * 1024, Parallelism: 4, OutputSize: 32, Function: "argon2b"})
 	assert.EqualError(t, err, ErrFunctionMismatch.Error())
+	assert.Empty(t, hash)
 
 	fmt.Println(" - " + t.Name() + " complete - ")
 }
 
 func TestGenerateSalt(t *testing.T) {
-	expectedLen := 20
-	salt, err := generateSalt(uint8(expectedLen))
-	assert.NoError(t, err)
-	assert.Len(t, salt, expectedLen)
+	// Generate random salts from minSaltSize to maxSaltSize
+	for i := minSaltSize; i < maxSaltSize; i++ {
+		expectedLen := i
+		salt := generateSalt(uint8(expectedLen))
+		assert.Len(t, salt, expectedLen)
+	}
 }
 
 func TestHashAndVerify(t *testing.T) {
 	// Hash & Verify various lengths from 8 chars up to 256 chars with default params
-	for i := 8; i < 256; i *= 3 {
+	for i := 8; i < 256; i *= 8 {
 		pass := randSeq(i)
 		out, err := Hash(pass)
 		assert.NoError(t, err)
@@ -164,7 +214,7 @@ func TestHashAndVerify(t *testing.T) {
 	}
 
 	// Hash & Verify with Custom Params
-	for i := 8; i < 256; i *= 3 {
+	for i := 8; i < 256; i *= 8 {
 		pass := randSeq(i)
 		out, err := Hash(pass, ArgonParams{Time: 12, Memory: 64 * 1024, Parallelism: 4, OutputSize: 32, Function: "argon2id"})
 		assert.NoError(t, err)
@@ -199,7 +249,7 @@ func TestParseParams(t *testing.T) {
 func TestBenchmark(t *testing.T) {
 	var count int
 	var totalDuration float64
-	for totalDuration < 5 {
+	for totalDuration < 3 {
 		singleDuration, err := Benchmark(defaultParams)
 		assert.NoError(t, err)
 		totalDuration += singleDuration

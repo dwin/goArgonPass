@@ -19,6 +19,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"log"
 	"regexp"
 	"strconv"
 	"strings"
@@ -75,10 +76,7 @@ func Hash(pass string, customParams ...ArgonParams) (string, error) {
 	}
 
 	// Generate random salt
-	salt, err := generateSalt(params.SaltSize)
-	if err != nil {
-		return "", err
-	}
+	salt := generateSalt(params.SaltSize)
 
 	// Generate hash
 	passHash, err := generateHash([]byte(pass), salt, params)
@@ -95,43 +93,25 @@ func Hash(pass string, customParams ...ArgonParams) (string, error) {
 	// $argon2{function(i or id)}$v={version}$m={memory},t={time},p={parallelism}${salt(base64)}${digest(base64)}
 	// example: $argon2id$v=19$m=65536,t=2,p=4$c29tZXNhbHQ$RdescudvJCsgt3ub+b+dWRWJTmaaJObG
 	hashOut := fmt.Sprintf("$%s$v=%v$m=%v,t=%v,p=%v$%s$%s", params.Function, currentVersion, params.Memory, params.Time, params.Parallelism, encodedSalt, encodedHash)
-	// Check valid output
-	if err := checkHashFormat(hashOut); err != nil {
-		return "", fmt.Errorf("Hash output failed validation check parameters if custom, error: %s", err)
-	}
+
 	return hashOut, nil
 }
 
 // Verify regenerates the hash using the supplied pass and compares the value returning an error if the password
 // is invalid or another error occurs. Any error should be considered a validation failure.
 func Verify(pass, hash string) error {
-	// Check valid input
-	if err := checkHashFormat(hash); err != nil {
+	// Get Parameters
+	hashParams, err := GetParams(hash)
+	if err != nil {
 		return err
 	}
 
 	// Split hash into parts
 	part := strings.Split(hash, "$")
 
-	// Get Parameters
-	hashParams, err := parseParams(part[3])
-	if err != nil {
-		return err
-	}
-
-	// Check hash function
-	switch part[1] {
-	case argon2i:
-		hashParams.Function = argon2i
-	case argon2id:
-		hashParams.Function = argon2id
-	}
-
 	// Get & Check Version
-	hashVersion, err := strconv.Atoi(strings.Trim(part[2], "v="))
-	if err != nil {
-		return ErrVersion
-	}
+	hashVersion, _ := strconv.Atoi(strings.Trim(part[2], "v="))
+
 	// Verify version is not greater than current version or less than 0
 	if hashVersion > currentVersion || hashVersion < 0 {
 		return ErrVersion
@@ -146,11 +126,11 @@ func Verify(pass, hash string) error {
 	// Get argon digest
 	decodedHash, err := base64.StdEncoding.DecodeString(part[5])
 	if err != nil {
-		return ErrDecodingHash
+		return ErrDecodingDigest
 	}
 
 	// Get size of existing hash
-	hashParams.OutputSize = uint32(len(decodedHash))
+	//hashParams.OutputSize = uint32(len(decodedHash))
 
 	// Generate hash for comparison using user input with stored parameters
 	comparisonHash, err := generateHash([]byte(pass), salt, hashParams)
@@ -171,10 +151,51 @@ func Verify(pass, hash string) error {
 
 }
 
+// GetParams takes hash sting as input and returns parameters as ArgonParams along with error
+func GetParams(hash string) (hashParams ArgonParams, err error) {
+	// Check valid input
+	if err = checkHashFormat(hash); err != nil {
+		return
+	}
+
+	// Split hash into parts
+	part := strings.Split(hash, "$")
+
+	// Get Parameters
+	hashParams, err = parseParams(part[3])
+	if err != nil {
+		return
+	}
+
+	// Check hash function
+	switch part[1] {
+	case argon2i:
+		hashParams.Function = argon2i
+	case argon2id:
+		hashParams.Function = argon2id
+	}
+
+	// Get salt size
+	salt, err := base64.StdEncoding.DecodeString(part[4])
+	if err != nil {
+		return hashParams, ErrDecodingSalt
+	}
+	hashParams.SaltSize = uint8(len(salt))
+
+	// Get argon digest size
+	decodedHash, err := base64.StdEncoding.DecodeString(part[5])
+	if err != nil {
+		return hashParams, ErrDecodingDigest
+	}
+	hashParams.OutputSize = uint32(len(decodedHash))
+
+	return
+}
+
 // checkHashFormat uses regex to validate hash string pattern and returns error
 func checkHashFormat(hash string) error {
 	// Check valid input
-	valid := regexp.MustCompile(`[$]argon2(?:id|i)[$]v=\d\d[$]m=\d{3,12},t=\d{1,4},p=\d{1,2}[$][^$]{1,100}[$][^$]{1,768}`)
+	valid := regexp.MustCompile(`[$]argon2(?:id|i)[$]v=\d{1,3}[$]m=\d{3,20},t=\d{1,4},p=\d{1,2}[$][^$]{1,100}[$][^$]{1,768}`)
 	if !valid.MatchString(hash) {
 		return ErrInvalidHashFormat
 	}
@@ -182,12 +203,14 @@ func checkHashFormat(hash string) error {
 }
 
 // generateSalt uses int input to return a random a salt for use in crypto operations
-func generateSalt(saltLen uint8) ([]byte, error) {
+func generateSalt(saltLen uint8) []byte {
 	salt := make([]byte, saltLen)
 	if _, err := io.ReadFull(rand.Reader, salt); err != nil {
-		return salt, fmt.Errorf("Unable to generate random salt needed for crypto operations, error: %s", err)
+		fmt.Printf("Unable to generate random salt needed for crypto operations, error: %s\n", err)
+		log.Printf("Unable to generate random salt needed for crypto operations, error: %s\n", err)
+		return nil
 	}
-	return salt, nil
+	return salt
 }
 
 // generateHash takes passphrase and salt as bytes with parameters to provide Argon2 digest output
@@ -254,9 +277,7 @@ func checkParams(params ArgonParams) ArgonParams {
 	if params.Parallelism > maxParallelism {
 		params.Parallelism = maxParallelism
 	}
-	if params.Function != argon2i && params.Function != argon2id {
-		params.Function = argon2id
-	}
+
 	return params
 }
 
@@ -265,7 +286,7 @@ func Benchmark(params ArgonParams) (elapsed float64, err error) {
 	pass := "benchmarkpass"
 	start := time.Now()
 
-	salt, err := generateSalt(params.SaltSize)
+	salt := generateSalt(params.SaltSize)
 	_, err = generateHash([]byte(pass), salt, params)
 
 	t := time.Now()
