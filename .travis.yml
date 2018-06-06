@@ -1,0 +1,8 @@
+language: go
+
+os:
+  - linux
+
+script:
+    - go build -race -v .
+    - go test -race -cover -v ./
