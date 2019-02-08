@@ -16,6 +16,7 @@ package argonpass
 
 import (
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/base64"
 	"fmt"
 	"io"
@@ -139,16 +140,11 @@ func Verify(pass, hash string) error {
 	}
 
 	// Compare given hash input to generated hash
-	for i := range decodedHash {
-		if decodedHash[i] != comparisonHash[i] {
-			return ErrHashMismatch
-		}
+	if res := subtle.ConstantTimeCompare(decodedHash, comparisonHash); res == 1 {
 		// return nil only if supplied hash and computed hash from passphrase match
 		return nil
 	}
-
 	return ErrHashMismatch
-
 }
 
 // GetParams takes hash sting as input and returns parameters as ArgonParams along with error
