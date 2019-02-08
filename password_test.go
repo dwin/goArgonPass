@@ -9,12 +9,13 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var (
 	testdata = map[string]string{
-		"testpass":                                                         "$argon2id$v=19$m=65536,t=10,p=4$wusfaUEXfbhsz9R3+PI9nQ==$54an1yiYbCEfTtUzE0Lb536IcyP5CGpEvsO1agp2aZQ=",
-		"pEVDROhl8ksT1FiZB1Nc":                                             "$argon2id$v=19$m=65536,t=10,p=4$C75eQEesF0BbHL3wBsaaAg==$VwNdvHdQn1QMYpedCZ0o/4JX07Sh5LrfTBzTQhSXfc0=",
+		"testpass":             "$argon2id$v=19$m=65536,t=10,p=4$wusfaUEXfbhsz9R3+PI9nQ==$54an1yiYbCEfTtUzE0Lb536IcyP5CGpEvsO1agp2aZQ=",
+		"pEVDROhl8ksT1FiZB1Nc": "$argon2id$v=19$m=65536,t=10,p=4$C75eQEesF0BbHL3wBsaaAg==$VwNdvHdQn1QMYpedCZ0o/4JX07Sh5LrfTBzTQhSXfc0=",
 		"8koJ3haNVVV47JWg8zQRKLtImCUgmVFg8dCS7IYtCjhLnFFfHTNXXpbZoSUEIimH": "$argon2id$v=19$m=65536,t=10,p=4$smp4HSblqVHGu1wNvPMkYA==$FCjpCngTwRefH3BT//hyLd0/q6hgbMjiBtPdqnsjL4k=",
 		"OEQRVj1O":                 "$argon2id$v=19$m=65536,t=10,p=4$rKWlclAZ1feliEaKUVe9Aw==$96ByjSgZFdvvCpJhoLxtnjTRYbAF6cyNgdnl2LdZ0gI=",
 		"o2s5M7gttWtX4hr6":         "$argon2i$v=19$m=65536,t=5,p=4$KG6py4HoITzyOP0sOJvAAA==$ZY2gclySeV9LDcAnfU6pjbYdbw652jZVxqNBEQFWpyk=",
@@ -81,7 +82,7 @@ func TestVerify(t *testing.T) {
 	// Test Verify using testdata
 	for pass, hash := range testdata {
 		err := Verify(pass, hash)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		if err != nil {
 			fmt.Printf("Verification failed for pass: %s with hash: %s\n", pass, hash)
 		}
@@ -90,53 +91,53 @@ func TestVerify(t *testing.T) {
 	// Test Verify using testdata hashes and invalid passphrases
 	for _, hash := range testdata {
 		err := Verify("invalid_pass", hash)
-		assert.EqualError(t, err, ErrHashMismatch.Error())
+		require.EqualError(t, err, ErrHashMismatch.Error())
 	}
 
 	// Test Verify with bad salt
 	err := Verify("password", "$argon2i$v=19$m=65536,t=5,p=4$=$m6zc3AIQbGZOSv3grFtlquTUXXKdyfmCvrmKJ4cQf7E=")
-	assert.EqualError(t, err, ErrDecodingSalt.Error())
-	assert.NotNil(t, err)
+	require.EqualError(t, err, ErrDecodingSalt.Error())
+	require.NotNil(t, err)
 
 	// Test Verify with bad digest
 	err = Verify("password", "$argon2i$v=19$m=65536,t=5,p=4$MrcQyTq/if2OH2G5+YPKig==$=")
-	assert.EqualError(t, err, ErrDecodingDigest.Error())
-	assert.NotNil(t, err)
+	require.EqualError(t, err, ErrDecodingDigest.Error())
+	require.NotNil(t, err)
 
 	// Test Verify with bad hash string input
 	err = Verify("password", "$argon2id$v=19$m=65536,t=10$p=4$wusfaUEXfbhsz9R3+PI9nQ==$54an1yiYbCEfTtUzE0Lb536IcyP5CGpEvsO1agp2aZQ=")
-	assert.EqualError(t, err, ErrInvalidHashFormat.Error())
-	assert.NotNil(t, err)
+	require.EqualError(t, err, ErrInvalidHashFormat.Error())
+	require.NotNil(t, err)
 
 	// Test Verify with Invalid hash function
 	err = Verify("password", "$argon2bi$v=19$m=65536,t=10,p=4$wusfaUEXfbhsz9R3+PI9nQ==$54an1yiYbCEfTtUzE0Lb536IcyP5CGpEvsO1agp2aZQ=")
-	assert.EqualError(t, err, ErrInvalidHashFormat.Error())
-	assert.NotNil(t, err)
+	require.EqualError(t, err, ErrInvalidHashFormat.Error())
+	require.NotNil(t, err)
 
 	// Test Verify with Invalid version
 	err = Verify("password", "$argon2i$v=99$m=65536,t=10,p=4$wusfaUEXfbhsz9R3+PI9nQ==$54an1yiYbCEfTtUzE0Lb536IcyP5CGpEvsO1agp2aZQ=")
-	assert.EqualError(t, err, ErrVersion.Error())
-	assert.NotNil(t, err)
+	require.EqualError(t, err, ErrVersion.Error())
+	require.NotNil(t, err)
 
 	// Test Verify with malformed/invalid salt
 	err = Verify("password", "$argon2i$v=19$m=65536,t=10,p=4$wusfaUEXf@hsz9R3+PI9nQ==$54an1yiYbCEfTtUzE0Lb536IcyP5CGpEvsO1agp2aZQ=")
-	assert.EqualError(t, err, ErrDecodingSalt.Error())
-	assert.NotNil(t, err)
+	require.EqualError(t, err, ErrDecodingSalt.Error())
+	require.NotNil(t, err)
 
 	// Test Verify with malformed/invalid salt
 	err = Verify("password", "$argon2i$v=19$m=65536,t=5,p=4$MrcQyTq/if?OH2G5+YPKig==$m6zc3AIQbGZOSv3grFtlquTUXXKdyfmCvrmKJ4cQf7E=")
-	assert.EqualError(t, err, ErrDecodingSalt.Error())
-	assert.NotNil(t, err)
+	require.EqualError(t, err, ErrDecodingSalt.Error())
+	require.NotNil(t, err)
 
 	// Test Verify with malformed/invalid digest
 	err = Verify("password", "$argon2i$v=19$m=65536,t=10,p=4$wusfaUEXfbhsz9R3+PI9nQ==$54an1yiYbCEfTtUzE0Lb53#IcyP5CGpEvsO1agp2aZQ=")
-	assert.EqualError(t, err, ErrDecodingDigest.Error())
-	assert.NotNil(t, err)
+	require.EqualError(t, err, ErrDecodingDigest.Error())
+	require.NotNil(t, err)
 
 	// Test Verify with malformed/invalid digest
 	err = Verify("password", "$argon2i$v=19$m=65536,t=5,p=4$MrcQyTq/ifOH2G5+YPKig==$m6zc3AIQbGZOSv3grFtlquTUX*XKdyfmCvrmKJ4cQf7E=")
-	assert.EqualError(t, err, ErrDecodingSalt.Error())
-	assert.NotNil(t, err)
+	require.EqualError(t, err, ErrDecodingSalt.Error())
+	require.NotNil(t, err)
 
 	fmt.Println(" - " + t.Name() + " complete - ")
 }
