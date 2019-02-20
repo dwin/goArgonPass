@@ -19,8 +19,6 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"fmt"
-	"io"
-	"log"
 	"regexp"
 	"strconv"
 	"strings"
@@ -77,7 +75,10 @@ func Hash(pass string, customParams ...ArgonParams) (string, error) {
 	}
 
 	// Generate random salt
-	salt := generateSalt(params.SaltSize)
+	salt, err := generateSalt(params.SaltSize)
+	if err != nil {
+		return "", err
+	}
 
 	// Generate hash
 	passHash, err := generateHash([]byte(pass), salt, params)
@@ -199,14 +200,12 @@ func checkHashFormat(hash string) error {
 }
 
 // generateSalt uses int input to return a random a salt for use in crypto operations
-func generateSalt(saltLen uint8) []byte {
+func generateSalt(saltLen uint8) ([]byte, error) {
 	salt := make([]byte, saltLen)
-	if _, err := io.ReadFull(rand.Reader, salt); err != nil {
-		fmt.Printf("Unable to generate random salt needed for crypto operations, error: %s\n", err)
-		log.Printf("Unable to generate random salt needed for crypto operations, error: %s\n", err)
-		return nil
+	if _, err := rand.Read(salt); err != nil {
+		return nil, err
 	}
-	return salt
+	return salt, nil
 }
 
 // generateHash takes passphrase and salt as bytes with parameters to provide Argon2 digest output
@@ -282,7 +281,7 @@ func Benchmark(params ArgonParams) (elapsed float64, err error) {
 	pass := "benchmarkpass"
 	start := time.Now()
 
-	salt := generateSalt(params.SaltSize)
+	salt, err := generateSalt(params.SaltSize)
 	_, err = generateHash([]byte(pass), salt, params)
 
 	t := time.Now()

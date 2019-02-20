@@ -198,7 +198,8 @@ func TestGenerateSalt(t *testing.T) {
 	// Generate random salts from minSaltSize to maxSaltSize
 	for i := minSaltSize; i < maxSaltSize; i++ {
 		expectedLen := i
-		salt := generateSalt(uint8(expectedLen))
+		salt, err := generateSalt(uint8(expectedLen))
+		assert.NoError(t, err)
 		assert.Len(t, salt, expectedLen)
 	}
 }
