@@ -27,9 +27,17 @@ import (
 	"golang.org/x/crypto/argon2"
 )
 
+// ArgonVariant describes an Argon2 hashing variant.
+type ArgonVariant string
+
 const (
-	argon2i        = "argon2i"
-	argon2id       = "argon2id"
+	// ArgonVariant2i describe the Argon2i variant.
+	ArgonVariant2i = ArgonVariant("argon2i")
+	// ArgonVariant2id describe the Argon2id variant.
+	ArgonVariant2id = ArgonVariant("argon2id")
+)
+
+const (
 	currentVersion = argon2.Version
 	minPassLength  = 8
 	minSaltSize    = 8
@@ -43,7 +51,7 @@ const (
 )
 
 var (
-	defaultParams = ArgonParams{Time: 1, Memory: 64 * 1024, Parallelism: 4, OutputSize: 32, Function: argon2id, SaltSize: 8}
+	defaultParams = ArgonParams{Time: 1, Memory: 64 * 1024, Parallelism: 4, OutputSize: 32, Function: ArgonVariant2id, SaltSize: 8}
 )
 
 // ArgonParams control how the Argon2 function creates the digest output
@@ -52,7 +60,7 @@ type ArgonParams struct {
 	Memory      uint32
 	Parallelism uint8
 	OutputSize  uint32
-	Function    string
+	Function    ArgonVariant
 	SaltSize    uint8
 }
 
@@ -164,13 +172,8 @@ func GetParams(hash string) (hashParams ArgonParams, err error) {
 		return
 	}
 
-	// Check hash function
-	switch part[1] {
-	case argon2i:
-		hashParams.Function = argon2i
-	case argon2id:
-		hashParams.Function = argon2id
-	}
+	// Get hash function
+	hashParams.Function = ArgonVariant(part[1])
 
 	// Get salt size
 	salt, err := base64.StdEncoding.DecodeString(part[4])
@@ -211,9 +214,9 @@ func generateSalt(saltLen uint8) ([]byte, error) {
 // generateHash takes passphrase and salt as bytes with parameters to provide Argon2 digest output
 func generateHash(pass, salt []byte, params ArgonParams) ([]byte, error) {
 	switch params.Function {
-	case argon2i:
+	case ArgonVariant2i:
 		return argon2.Key(pass, salt, params.Time, params.Memory, params.Parallelism, params.OutputSize), nil
-	case argon2id:
+	case ArgonVariant2id:
 		return argon2.IDKey(pass, salt, params.Time, params.Memory, params.Parallelism, params.OutputSize), nil
 	default:
 		return nil, ErrFunctionMismatch
