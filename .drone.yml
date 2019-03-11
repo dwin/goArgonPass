@@ -1,0 +1,40 @@
+kind: pipeline
+name: default
+
+workspace:
+  base: /go
+  path: src/github.com/dwin/goArgonPass
+
+steps:
+  - name: test-golang_alpine-latest
+    image: golang:alpine
+    pull: always
+    commands:
+      - go build -race -v .
+
+  - name: test-golang_1.11-alpine
+    image: golang:1.11-alpine
+    commands:
+      - go test ./...
+
+  - name: test-golang_1.12-alpine
+    image: golang:1.12-alpine3.9
+    commands:
+      - go test ./...
+
+  - name: test-golang_alpine_latest
+    image: golang:alpine
+    pull: always
+    commands:
+      - apk add --update bash
+      - go test -race -coverprofile=coverage.txt -covermode=atomic ./...
+      - bash <(curl -s https://codecov.io/bash)
+
+  - name: coverage
+    image: plugins/codecov
+    settings:
+      required: true
+      token:
+        from_secret: codecov_token
+      files:
+        - coverage.txt
