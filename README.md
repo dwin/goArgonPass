@@ -6,6 +6,9 @@
 [![Coverage Status](https://coveralls.io/repos/github/dwin/goArgonPass/badge.svg?branch=master)](https://coveralls.io/github/dwin/goArgonPass?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/dwin/goArgonPass)](https://goreportcard.com/report/github.com/dwin/goArgonPass)
 
+Master: [![Build Status](https://drone.github.dlsmi.com/api/badges/dwin/goArgonPass/status.svg)](https://drone.github.dlsmi.com/dwin/goArgonPass)
+Dev: [![Build Status](https://drone.github.dlsmi.com/api/badges/dwin/goArgonPass/status.svg?ref=/refs/heads/dev)](https://drone.github.dlsmi.com/dwin/goArgonPass)
+
 **_All hashing and crypto is done by Go library packages. This is only a utility package to make the process described easier._**
 
 ## What?

@@ -29,7 +29,7 @@ steps:
     pull: always
     commands:
       - apk add --update bash build-base
-      - go test -race -coverprofile=coverage.txt -covermode=atomic ./...
+      - go test -coverprofile=coverage.txt -covermode=atomic ./...
       - bash <(curl -s https://codecov.io/bash)
   # - name: coverage
   #   image: plugins/codecov
