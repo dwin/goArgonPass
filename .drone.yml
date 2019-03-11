@@ -6,35 +6,36 @@ workspace:
   path: src/github.com/dwin/goArgonPass
 
 steps:
-  - name: test-golang_alpine-latest
+  - name: build-alpine-latest
     image: golang:alpine
     pull: always
     commands:
       - go build -race -v .
 
-  - name: test-golang_1.11-alpine
+  - name: test-1.11-alpine
     image: golang:1.11-alpine
     commands:
+      - apk add --update bash build-base
       - go test ./...
 
-  - name: test-golang_1.12-alpine
+  - name: test-1.12-alpine
     image: golang:1.12-alpine3.9
     commands:
+      - apk add --update bash build-base
       - go test ./...
 
-  - name: test-golang_alpine_latest
+  - name: test-alpine_latest
     image: golang:alpine
     pull: always
     commands:
-      - apk add --update bash
+      - apk add --update bash build-base
       - go test -race -coverprofile=coverage.txt -covermode=atomic ./...
       - bash <(curl -s https://codecov.io/bash)
-
-  - name: coverage
-    image: plugins/codecov
-    settings:
-      required: true
-      token:
-        from_secret: codecov_token
-      files:
-        - coverage.txt
+  # - name: coverage
+  #   image: plugins/codecov
+  #   settings:
+  #     required: true
+  #     token:
+  #       from_secret: codecov_token
+  #     files:
+  #       - coverage.txt
