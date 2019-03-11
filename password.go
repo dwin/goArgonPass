@@ -50,8 +50,32 @@ const (
 	maxParallelism = 64
 )
 
-var defaultParams = ArgonParams{Time: 1, Memory: 64 * 1024, Parallelism: 4, OutputSize: 32, Function: ArgonVariant2id, SaltSize: 8}
+const (
+	// DefaultMemory ...
+	DefaultMemory = 64 * 1024
+	// DefaultParallelism ...
+	DefaultParallelism = 4
+	// DefaultOutputSize ...
+	DefaultOutputSize = 32
+	// DefaultFunction ...
+	DefaultFunction = ArgonVariant2id
+	// DefaultSaltSize ...
+	DefaultSaltSize = 8
+	// DefaultTime ...
+	DefaultTime = 1
+)
 
+// defaultParams are the parameters used if none are provided to Hash function
+var defaultParams = ArgonParams{
+	Time:        DefaultTime,
+	Memory:      DefaultMemory,
+	Parallelism: DefaultParallelism,
+	OutputSize:  DefaultOutputSize,
+	Function:    DefaultFunction,
+	SaltSize:    DefaultSaltSize,
+}
+
+// hashFormatRegExpCompiled is used to verify hash string format
 var hashFormatRegExpCompiled = regexp.MustCompile(`[$]argon2(?:id|i)[$]v=\d{1,3}[$]m=\d{3,20},t=\d{1,4},p=\d{1,2}[$][^$]{1,100}[$][^$]{1,768}`)
 
 // ArgonParams control how the Argon2 function creates the digest output
