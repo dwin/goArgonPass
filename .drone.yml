@@ -27,15 +27,26 @@ steps:
   - name: test-alpine_latest
     image: golang:alpine
     pull: always
+    volumes:
+      - name: cache
+        path: /tmp/cache
     commands:
       - apk add --update bash build-base
-      - go test -coverprofile=coverage.txt -covermode=atomic ./...
+      - go test -coverprofile=/tmp/cache/coverage.txt -covermode=atomic ./...
       - bash <(curl -s https://codecov.io/bash)
-  # - name: coverage
-  #   image: plugins/codecov
-  #   settings:
-  #     required: true
-  #     token:
-  #       from_secret: codecov_token
-  #     files:
-  #       - coverage.txt
+
+  - name: coverage
+    image: plugins/codecov
+    volumes:
+      - name: cache
+        path: /tmp/cache
+    settings:
+      required: true
+      token:
+        from_secret: codecov_token
+      files:
+        - /tmp/cache/coverage.txt
+
+volumes:
+  - name: cache
+    temp: {}
