@@ -6,7 +6,7 @@ workspace:
   path: src/github.com/dwin/goArgonPass
 
 steps:
-  - name: build-alpine-latest
+  - name: build-alpine_latest
     image: golang:alpine
     pull: always
     commands:

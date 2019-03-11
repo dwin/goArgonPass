@@ -66,9 +66,9 @@ func main() {
 ### Output Format
 
 ```bash
-$argon2id$v=19$m=65536,t=1,p=4$in2Oi1x57p0=$FopwSR12aLJ9OGPw1rKU5K5osAOGxOJzxC/shk+i850=
+$ argon2id$v=19$m=65536,t=1,p=4$in2Oi1x57p0=$FopwSR12aLJ9OGPw1rKU5K5osAOGxOJzxC/shk+i850=
 
-$argon2{function(i/id)}$v={version}$m={memory},t={time},p={parallelism}${salt(base64)}${digest(base64)}
+$ argon2{function(i/id)}$v={version}$m={memory},t={time},p={parallelism}${salt(base64)}${digest(base64)}
 ```
 
 ### Other Notes
