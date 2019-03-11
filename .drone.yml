@@ -33,7 +33,6 @@ steps:
     commands:
       - apk add --update bash build-base
       - go test -coverprofile=/tmp/cache/coverage.txt -covermode=atomic ./...
-      - bash <(curl -s https://codecov.io/bash)
 
   - name: coverage
     image: plugins/codecov
