@@ -44,12 +44,12 @@ func TestHash(t *testing.T) {
 	assert.EqualError(t, err, ErrCustomParameters.Error())
 
 	// Test below min custom params
-	out, err := Hash("password", ArgonParams{Function: argon2i})
+	out, err := Hash("password", ArgonParams{Function: ArgonVariant2i})
 	assert.NoError(t, err)
 	assert.Contains(t, out, "$argon2i$v=19$m=1024,t=1,p=1")
 
 	// Test above max params, should be forced to max
-	out, err = Hash("password", ArgonParams{SaltSize: 100, OutputSize: 600, Function: argon2i})
+	out, err = Hash("password", ArgonParams{SaltSize: 100, OutputSize: 600, Function: ArgonVariant2i})
 	assert.NoError(t, err)
 	if err != nil {
 		t.FailNow()

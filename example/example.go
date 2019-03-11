@@ -16,7 +16,7 @@ func main() {
 		Memory:      512,
 		Parallelism: 2,
 		OutputSize:  16,
-		Function:    "argon2i", // can be `argon2i` or `argon2id`
+		Function:    argonpass.ArgonVariant2id, // can be `argon2i` or `argon2id`
 	}
 
 	// Hash with Default Parameters
