@@ -142,9 +142,6 @@ func Verify(pass, hash string) error {
 		return ErrDecodingDigest
 	}
 
-	// Get size of existing hash
-	//hashParams.OutputSize = uint32(len(decodedHash))
-
 	// Generate hash for comparison using user input with stored parameters
 	comparisonHash, err := generateHash([]byte(pass), salt, hashParams)
 	if err != nil {

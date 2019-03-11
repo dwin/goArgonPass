@@ -110,6 +110,11 @@ func TestVerify(t *testing.T) {
 	require.NotNil(t, err)
 
 	// Test Verify with malformed/invalid salt
+	err = Verify("password", "$argon2i$v=19$m=65536,t=5,p=4$ $m6zc3AIQbGZOSv3grFtlquTUXXKdyfmCvrmKJ4cQf7E=")
+	require.EqualError(t, err, ErrDecodingSalt.Error())
+	require.NotNil(t, err)
+
+	// Test Verify with malformed/invalid salt
 	err = Verify("password", "$argon2i$v=19$m=65536,t=5,p=4$MrcQyTq/if?OH2G5+YPKig==$m6zc3AIQbGZOSv3grFtlquTUXXKdyfmCvrmKJ4cQf7E=")
 	require.EqualError(t, err, ErrDecodingSalt.Error())
 	require.NotNil(t, err)
@@ -121,6 +126,11 @@ func TestVerify(t *testing.T) {
 
 	// Test Verify with malformed/invalid digest
 	err = Verify("password", "$argon2i$v=19$m=65536,t=5,p=4$MrcQyTq/ifOH2G5+YPKig==$m6zc3AIQbGZOSv3grFtlquTUX*XKdyfmCvrmKJ4cQf7E=")
+	require.EqualError(t, err, ErrDecodingSalt.Error())
+	require.NotNil(t, err)
+
+	// Test Verify with malformed/invalid digest
+	err = Verify("password", "$argon2i$v=19$m=65536,t=5,p=4$MrcQyTq/ifOH2G5+YPKig==$ ")
 	require.EqualError(t, err, ErrDecodingSalt.Error())
 	require.NotNil(t, err)
 
