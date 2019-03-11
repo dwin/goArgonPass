@@ -16,7 +16,7 @@ Dev:
 
 **_All hashing and crypto is done by Go library packages. This is only a utility package to make the process described easier._**
 
-## What?
+## Description
 
 goArgonPass is a Argon2 Password utility package for Go using the crypto library package [Argon2](https://godoc.org/golang.org/x/crypto/argon2). Argon2 was the winner of the most recent [Password Hashing Competition](https://password-hashing.net/#phc) and doesn't suffer from issues that Bcrypt has such as truncating input over 72 characters. This is designed for use anywhere password hashing and verification might be needed and is intended to replace implementations using bcrypt or Scrypt. The string input/output format was designed to be compatible with [Passlib for Python](https://passlib.readthedocs.io/en/stable/lib/passlib.hash.argon2.html) and [Argon2 PHP](https://wiki.php.net/rfc/argon2_password_hash), and you should have full compatibility using the `argon2i` function, but will not be able to use `argon2id`, which is the default for this pacakge until those libraries are updated to support it. I encourage you to find the parameters that work best for your application, but the defaults are resonable for an interactive use such as a web application login.
 
@@ -28,7 +28,7 @@ The default Argon2 function is `Argon2id`, which is a hybrid version of Argon2 c
 
 ## Get Started
 
-```
+```bash
 go get github.com/dwin/goArgonPass
 ```
 
@@ -36,36 +36,36 @@ See [example/example.go](https://github.com/dwin/goArgonPass/blob/master/example
 
 ```go
 import (
-	"fmt"
-	"os"
+    "fmt"
+    "os"
 
-	"github.com/dwin/goArgonPass"
+    "github.com/dwin/goArgonPass"
 )
 
 func main() {
-	// Obtain user password from form or other input
-	userPassInput := "password"
+    // Obtain user password from form or other input
+    userPassInput := "password"
 
-	// Hash with Default Parameters
-	hash, err := argonpass.Hash(userPassInput)
-	if err != nil {
-		// Handle Error
-		os.Exit(1)
-	}
-	fmt.Println("Hash Output: ", hash)
-	// Verify Hash
-	err = argonpass.Verify(userPassInput, hash)
-	if err != nil {
-		fmt.Println("Hash verification error: ", err)
-	}
-	fmt.Println("Hash verified")
+    // Hash with Default Parameters
+    hash, err := argonpass.Hash(userPassInput)
+    if err != nil {
+        // Handle Error
+        os.Exit(1)
+    }
+    fmt.Println("Hash Output: ", hash)
+    // Verify Hash
+    err = argonpass.Verify(userPassInput, hash)
+    if err != nil {
+        fmt.Println("Hash verification error: ", err)
+    }
+    fmt.Println("Hash verified")
 }
 
 ```
 
-**Output Format**
+### Output Format
 
-```
+```bash
 $argon2id$v=19$m=65536,t=1,p=4$in2Oi1x57p0=$FopwSR12aLJ9OGPw1rKU5K5osAOGxOJzxC/shk+i850=
 
 $argon2{function(i/id)}$v={version}$m={memory},t={time},p={parallelism}${salt(base64)}${digest(base64)}
@@ -73,15 +73,26 @@ $argon2{function(i/id)}$v={version}$m={memory},t={time},p={parallelism}${salt(ba
 
 ### Other Notes
 
+#### Custom Parameters
+
 Set Custom Parameters by passing ArgonParams{} to Hash().
 
-```
+| Parameter   |      Type      |      Default      |                        Valid Range |
+| ----------- | :------------: | :---------------: | ---------------------------------: |
+| Time        |    `uint32`    |        `1`        |                             `>= 1` |
+| Memory      |    `uint32`    |      `65536`      |                          `>= 1024` |
+| Parallelism |    `uint8`     |        `4`        |                             `1-64` |
+| OutputSize  |    `uint32`    |        `1`        |                           `16-512` |
+| Function    | `ArgonVariant` | `ArgonVariant2id` | `ArgonVariant2id | ArgonVariant2i` |
+| SaltSize    |    `uint8`     |        `8`        |                             `8-64` |
+
+```go
 type ArgonParams struct {
-	Time        uint32
-	Memory      uint32
-	Parallelism uint8
-	OutputSize  uint32
-	Function    string
-	SaltSize    uint8
+    Time        uint32
+    Memory      uint32
+    Parallelism uint8
+    OutputSize  uint32
+    Function    ArgonVariant
+    SaltSize    uint8
 }
 ```
