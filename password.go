@@ -27,9 +27,17 @@ import (
 	"golang.org/x/crypto/argon2"
 )
 
+// ArgonVariant describes an Argon2 hashing variant.
+type ArgonVariant string
+
 const (
-	argon2i        = "argon2i"
-	argon2id       = "argon2id"
+	// ArgonVariant2i describe the Argon2i variant.
+	ArgonVariant2i ArgonVariant = "argon2i"
+	// ArgonVariant2id describe the Argon2id variant.
+	ArgonVariant2id ArgonVariant = "argon2id"
+)
+
+const (
 	currentVersion = argon2.Version
 	minPassLength  = 8
 	minSaltSize    = 8
@@ -42,9 +50,33 @@ const (
 	maxParallelism = 64
 )
 
-var (
-	defaultParams = ArgonParams{Time: 1, Memory: 64 * 1024, Parallelism: 4, OutputSize: 32, Function: argon2id, SaltSize: 8}
+const (
+	// DefaultMemory ...
+	DefaultMemory = 64 * 1024
+	// DefaultParallelism ...
+	DefaultParallelism = 4
+	// DefaultOutputSize ...
+	DefaultOutputSize = 32
+	// DefaultFunction ...
+	DefaultFunction = ArgonVariant2id
+	// DefaultSaltSize ...
+	DefaultSaltSize = 8
+	// DefaultTime ...
+	DefaultTime = 1
 )
+
+// defaultParams are the parameters used if none are provided to Hash function
+var defaultParams = ArgonParams{
+	Time:        DefaultTime,
+	Memory:      DefaultMemory,
+	Parallelism: DefaultParallelism,
+	OutputSize:  DefaultOutputSize,
+	Function:    DefaultFunction,
+	SaltSize:    DefaultSaltSize,
+}
+
+// hashFormatRegExpCompiled is used to verify hash string format
+var hashFormatRegExpCompiled = regexp.MustCompile(`[$]argon2(?:id|i)[$]v=\d{1,3}[$]m=\d{3,20},t=\d{1,4},p=\d{1,2}[$][^$]{1,100}[$][^$]{1,768}`)
 
 // ArgonParams control how the Argon2 function creates the digest output
 type ArgonParams struct {
@@ -52,7 +84,7 @@ type ArgonParams struct {
 	Memory      uint32
 	Parallelism uint8
 	OutputSize  uint32
-	Function    string
+	Function    ArgonVariant
 	SaltSize    uint8
 }
 
@@ -94,7 +126,7 @@ func Hash(pass string, customParams ...ArgonParams) (string, error) {
 	// Format output string
 	// $argon2{function(i or id)}$v={version}$m={memory},t={time},p={parallelism}${salt(base64)}${digest(base64)}
 	// example: $argon2id$v=19$m=65536,t=2,p=4$c29tZXNhbHQ$RdescudvJCsgt3ub+b+dWRWJTmaaJObG
-	hashOut := fmt.Sprintf("$%s$v=%v$m=%v,t=%v,p=%v$%s$%s", params.Function, currentVersion, params.Memory, params.Time, params.Parallelism, encodedSalt, encodedHash)
+	hashOut := generateOutputString(params.Function, currentVersion, params.Memory, params.Time, params.Parallelism, encodedSalt, encodedHash)
 
 	return hashOut, nil
 }
@@ -112,7 +144,10 @@ func Verify(pass, hash string) error {
 	part := strings.Split(hash, "$")
 
 	// Get & Check Version
-	hashVersion, _ := strconv.Atoi(strings.Trim(part[2], "v="))
+	hashVersion, err := strconv.Atoi(strings.Trim(part[2], "v="))
+	if err != nil {
+		return err
+	}
 
 	// Verify version is not greater than current version or less than 0
 	if hashVersion > currentVersion || hashVersion < 0 {
@@ -130,9 +165,6 @@ func Verify(pass, hash string) error {
 	if err != nil {
 		return ErrDecodingDigest
 	}
-
-	// Get size of existing hash
-	//hashParams.OutputSize = uint32(len(decodedHash))
 
 	// Generate hash for comparison using user input with stored parameters
 	comparisonHash, err := generateHash([]byte(pass), salt, hashParams)
@@ -164,13 +196,8 @@ func GetParams(hash string) (hashParams ArgonParams, err error) {
 		return
 	}
 
-	// Check hash function
-	switch part[1] {
-	case argon2i:
-		hashParams.Function = argon2i
-	case argon2id:
-		hashParams.Function = argon2id
-	}
+	// Get hash function
+	hashParams.Function = ArgonVariant(part[1])
 
 	// Get salt size
 	salt, err := base64.StdEncoding.DecodeString(part[4])
@@ -192,8 +219,7 @@ func GetParams(hash string) (hashParams ArgonParams, err error) {
 // checkHashFormat uses regex to validate hash string pattern and returns error
 func checkHashFormat(hash string) error {
 	// Check valid input
-	valid := regexp.MustCompile(`[$]argon2(?:id|i)[$]v=\d{1,3}[$]m=\d{3,20},t=\d{1,4},p=\d{1,2}[$][^$]{1,100}[$][^$]{1,768}`)
-	if !valid.MatchString(hash) {
+	if !hashFormatRegExpCompiled.MatchString(hash) {
 		return ErrInvalidHashFormat
 	}
 	return nil
@@ -211,13 +237,17 @@ func generateSalt(saltLen uint8) ([]byte, error) {
 // generateHash takes passphrase and salt as bytes with parameters to provide Argon2 digest output
 func generateHash(pass, salt []byte, params ArgonParams) ([]byte, error) {
 	switch params.Function {
-	case argon2i:
+	case ArgonVariant2i:
 		return argon2.Key(pass, salt, params.Time, params.Memory, params.Parallelism, params.OutputSize), nil
-	case argon2id:
+	case ArgonVariant2id:
 		return argon2.IDKey(pass, salt, params.Time, params.Memory, params.Parallelism, params.OutputSize), nil
 	default:
 		return nil, ErrFunctionMismatch
 	}
+}
+
+func generateOutputString(argonVariant ArgonVariant, version int, memory, time uint32, parallelism uint8, salt, hash string) string {
+	return fmt.Sprintf("$%s$v=%v$m=%v,t=%v,p=%v$%s$%s", argonVariant, version, memory, time, parallelism, salt, hash)
 }
 
 // parseParams takes parameters from a slice of hash string and returns ArgonParams

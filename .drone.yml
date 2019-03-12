@@ -1,0 +1,51 @@
+kind: pipeline
+name: default
+
+workspace:
+  base: /go
+  path: src/github.com/dwin/goArgonPass
+
+steps:
+  - name: build-alpine_latest
+    image: golang:alpine
+    pull: always
+    commands:
+      - go build -race -v .
+
+  - name: test-1.11-alpine
+    image: golang:1.11-alpine
+    commands:
+      - apk add --update bash build-base
+      - go test ./...
+
+  - name: test-1.12-alpine
+    image: golang:1.12-alpine3.9
+    commands:
+      - apk add --update bash build-base
+      - go test ./...
+
+  - name: test-alpine_latest
+    image: golang:alpine
+    pull: always
+    volumes:
+      - name: cache
+        path: /tmp/cache
+    commands:
+      - apk add --update bash build-base
+      - go test -coverprofile=/tmp/cache/coverage.txt -covermode=atomic ./...
+
+  - name: coverage
+    image: plugins/codecov
+    volumes:
+      - name: cache
+        path: /tmp/cache
+    settings:
+      required: true
+      token:
+        from_secret: codecov_token
+      files:
+        - /tmp/cache/coverage.txt
+
+volumes:
+  - name: cache
+    temp: {}

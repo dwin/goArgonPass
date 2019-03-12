@@ -3,10 +3,11 @@ package argonpass
 import (
 	"encoding/base64"
 	"fmt"
-	"math/rand"
 	"strings"
 	"testing"
-	"time"
+
+	"github.com/icrowley/fake"
+	"golang.org/x/crypto/argon2"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,16 +25,6 @@ var (
 	}
 )
 
-// Generate random password
-func randSeq(n int) string {
-	rand.Seed(time.Now().UnixNano())
-	chars := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*(){}.<>|\\/~`+-[]\"1234567890-_,")
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = chars[rand.Intn(len(chars))]
-	}
-	return string(b)
-}
 func TestHash(t *testing.T) {
 	// Test Short Pass
 	_, err := Hash("1234567")
@@ -44,12 +35,12 @@ func TestHash(t *testing.T) {
 	assert.EqualError(t, err, ErrCustomParameters.Error())
 
 	// Test below min custom params
-	out, err := Hash("password", ArgonParams{Function: argon2i})
+	out, err := Hash("password", ArgonParams{Function: ArgonVariant2i})
 	assert.NoError(t, err)
 	assert.Contains(t, out, "$argon2i$v=19$m=1024,t=1,p=1")
 
 	// Test above max params, should be forced to max
-	out, err = Hash("password", ArgonParams{SaltSize: 100, OutputSize: 600, Function: argon2i})
+	out, err = Hash("password", ArgonParams{SaltSize: 100, OutputSize: 600, Function: ArgonVariant2i})
 	assert.NoError(t, err)
 	if err != nil {
 		t.FailNow()
@@ -69,12 +60,6 @@ func TestHash(t *testing.T) {
 	assert.EqualError(t, err, ErrFunctionMismatch.Error())
 	assert.Empty(t, hash)
 
-	fmt.Println(" - " + t.Name() + " complete - ")
-}
-
-func TestRandSeq(t *testing.T) {
-	s := randSeq(12)
-	assert.Len(t, s, 12)
 	fmt.Println(" - " + t.Name() + " complete - ")
 }
 
@@ -125,6 +110,11 @@ func TestVerify(t *testing.T) {
 	require.NotNil(t, err)
 
 	// Test Verify with malformed/invalid salt
+	err = Verify("password", "$argon2i$v=19$m=65536,t=5,p=4$ $m6zc3AIQbGZOSv3grFtlquTUXXKdyfmCvrmKJ4cQf7E=")
+	require.EqualError(t, err, ErrDecodingSalt.Error())
+	require.NotNil(t, err)
+
+	// Test Verify with malformed/invalid salt
 	err = Verify("password", "$argon2i$v=19$m=65536,t=5,p=4$MrcQyTq/if?OH2G5+YPKig==$m6zc3AIQbGZOSv3grFtlquTUXXKdyfmCvrmKJ4cQf7E=")
 	require.EqualError(t, err, ErrDecodingSalt.Error())
 	require.NotNil(t, err)
@@ -136,6 +126,11 @@ func TestVerify(t *testing.T) {
 
 	// Test Verify with malformed/invalid digest
 	err = Verify("password", "$argon2i$v=19$m=65536,t=5,p=4$MrcQyTq/ifOH2G5+YPKig==$m6zc3AIQbGZOSv3grFtlquTUX*XKdyfmCvrmKJ4cQf7E=")
+	require.EqualError(t, err, ErrDecodingSalt.Error())
+	require.NotNil(t, err)
+
+	// Test Verify with malformed/invalid digest
+	err = Verify("password", "$argon2i$v=19$m=65536,t=5,p=4$MrcQyTq/ifOH2G5+YPKig==$ ")
 	require.EqualError(t, err, ErrDecodingSalt.Error())
 	require.NotNil(t, err)
 
@@ -178,11 +173,40 @@ func TestCheckHashFormat(t *testing.T) {
 
 	fmt.Println(" - " + t.Name() + " complete - ")
 }
+
+func TestGenerateOutputString(t *testing.T) {
+	// Test Data
+	salt, err := generateSalt(8)
+	require.NoError(t, err)
+	saltEncoded := base64.StdEncoding.EncodeToString(salt)
+	testpass := []byte(fake.Password(8, 256, true, true, true))
+
+	t.Run("Generate ArgonVariant2i output string", func(t *testing.T) {
+		variant := ArgonVariant2i
+		hash, err := generateHash(testpass, salt, ArgonParams{Time: 2, Memory: 64 * 1024, Parallelism: 4, OutputSize: 32, Function: variant})
+		assert.NoError(t, err)
+		hashEncoded := base64.StdEncoding.EncodeToString(hash)
+		output := generateOutputString(variant, argon2.Version, 64*1024, 2, 4, saltEncoded, hashEncoded)
+		require.NotEmpty(t, output)
+		assert.NoError(t, checkHashFormat(output))
+	})
+
+	t.Run("Generate ArgonVariant2id output string", func(t *testing.T) {
+		variant := ArgonVariant2id
+		hash, err := generateHash(testpass, salt, ArgonParams{Time: 2, Memory: 64 * 1024, Parallelism: 4, OutputSize: 32, Function: variant})
+		assert.NoError(t, err)
+		hashEncoded := base64.StdEncoding.EncodeToString(hash)
+		output := generateOutputString(variant, argon2.Version, 64*1024, 2, 4, saltEncoded, hashEncoded)
+		require.NotEmpty(t, output)
+		assert.NoError(t, checkHashFormat(output))
+	})
+
+}
 func TestGenerateHash(t *testing.T) {
 	// Test regeneration with expected output
 	salt, _ := base64.StdEncoding.DecodeString("AXLonWF8MSgG515yMlIRSw==")
 	testpass := []byte("testpass")
-	out, err := generateHash(testpass, salt, ArgonParams{Time: 12, Memory: 64 * 1024, Parallelism: 4, OutputSize: 32, Function: "argon2id"})
+	out, err := generateHash(testpass, salt, ArgonParams{Time: 12, Memory: 64 * 1024, Parallelism: 4, OutputSize: 32, Function: ArgonVariant2id})
 	assert.NoError(t, err)
 	assert.EqualValues(t, "+iExTQDCJnO4fErO61zMAeC24R3utWMk8tW85saXOBU=", base64.StdEncoding.EncodeToString(out))
 
@@ -207,7 +231,7 @@ func TestGenerateSalt(t *testing.T) {
 func TestHashAndVerify(t *testing.T) {
 	// Hash & Verify various lengths from 8 chars up to 256 chars with default params
 	for i := 8; i < 256; i *= 8 {
-		pass := randSeq(i)
+		pass := fake.Password(8, 256, true, true, true)
 		out, err := Hash(pass)
 		assert.NoError(t, err)
 		assert.NotEmpty(t, out)
@@ -217,7 +241,7 @@ func TestHashAndVerify(t *testing.T) {
 
 	// Hash & Verify with Custom Params
 	for i := 8; i < 256; i *= 8 {
-		pass := randSeq(i)
+		pass := fake.Password(8, 256, true, true, true)
 		out, err := Hash(pass, ArgonParams{Time: 12, Memory: 64 * 1024, Parallelism: 4, OutputSize: 32, Function: "argon2id"})
 		assert.NoError(t, err)
 		assert.NotEmpty(t, out)
