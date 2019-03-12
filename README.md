@@ -83,7 +83,7 @@ Set Custom Parameters by passing ArgonParams{} to Hash().
 | Memory      |    `uint32`    |      `65536`      |                          `>= 1024` |
 | Parallelism |    `uint8`     |        `4`        |                             `1-64` |
 | OutputSize  |    `uint32`    |        `1`        |                           `16-512` |
-| Function    | `ArgonVariant` | `ArgonVariant2id` | `ArgonVariant2id | ArgonVariant2i` |
+| Function    | `ArgonVariant` | `ArgonVariant2id` | `ArgonVariant2id - ArgonVariant2i` |
 | SaltSize    |    `uint8`     |        `8`        |                             `8-64` |
 
 ```go
