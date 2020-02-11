@@ -272,7 +272,7 @@ func TestBenchmark(t *testing.T) {
 	var count int
 	var totalDuration float64
 	for totalDuration < 3 {
-		singleDuration, err := Benchmark(defaultParams)
+		singleDuration, err := Benchmark(NewDefaultParams())
 		assert.NoError(t, err)
 		totalDuration += singleDuration
 		count++

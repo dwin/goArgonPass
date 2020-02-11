@@ -75,14 +75,16 @@ const (
 	DefaultTime = 1
 )
 
-// defaultParams are the parameters used if none are provided to Hash function
-var defaultParams = &ArgonParams{
-	Time:        DefaultTime,
-	Memory:      DefaultMemory,
-	Parallelism: DefaultParallelism,
-	OutputSize:  DefaultOutputSize,
-	Function:    DefaultFunction,
-	SaltSize:    DefaultSaltSize,
+// NewDefaultParams returns the parameters used by default.
+func NewDefaultParams() *ArgonParams {
+	return &ArgonParams{
+		Time:        DefaultTime,
+		Memory:      DefaultMemory,
+		Parallelism: DefaultParallelism,
+		OutputSize:  DefaultOutputSize,
+		Function:    DefaultFunction,
+		SaltSize:    DefaultSaltSize,
+	}
 }
 
 // hashFormatRegExpCompiled is used to verify hash string format
@@ -112,7 +114,7 @@ func Hash(pass string, customParams *ArgonParams) (string, error) {
 	if customParams != nil {
 		params = checkParams(customParams)
 	} else {
-		params = defaultParams
+		params = NewDefaultParams()
 	}
 
 	// Generate random salt
