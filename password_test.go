@@ -27,20 +27,16 @@ var (
 
 func TestHash(t *testing.T) {
 	// Test Short Pass
-	_, err := Hash("1234567")
+	_, err := Hash("1234567", nil)
 	assert.EqualError(t, err, ErrPassphraseInputTooShort.Error())
 
-	// Test Too Many Custom Params
-	_, err = Hash("password", ArgonParams{Time: 0}, ArgonParams{Memory: 0})
-	assert.EqualError(t, err, ErrCustomParameters.Error())
-
 	// Test below min custom params
-	out, err := Hash("password", ArgonParams{Function: ArgonVariant2i})
+	out, err := Hash("password", &ArgonParams{Function: ArgonVariant2i})
 	assert.NoError(t, err)
 	assert.Contains(t, out, "$argon2i$v=19$m=1024,t=1,p=1")
 
 	// Test above max params, should be forced to max
-	out, err = Hash("password", ArgonParams{SaltSize: 100, OutputSize: 600, Function: ArgonVariant2i})
+	out, err = Hash("password", &ArgonParams{SaltSize: 100, OutputSize: 600, Function: ArgonVariant2i})
 	assert.NoError(t, err)
 	if err != nil {
 		t.FailNow()
@@ -56,7 +52,7 @@ func TestHash(t *testing.T) {
 	assert.Len(t, decodedHash, maxOutputSize)
 
 	// Test invalid function choice
-	hash, err := Hash("password", ArgonParams{Time: 1, Memory: 16 * 1024, Parallelism: 4, OutputSize: 32, Function: "argon2b"})
+	hash, err := Hash("password", &ArgonParams{Time: 1, Memory: 16 * 1024, Parallelism: 4, OutputSize: 32, Function: "argon2b"})
 	assert.EqualError(t, err, ErrFunctionMismatch.Error())
 	assert.Empty(t, hash)
 
@@ -152,7 +148,7 @@ func TestGetParams(t *testing.T) {
 	fmt.Println(" - " + t.Name() + " complete - ")
 }
 func TestCheckParams(t *testing.T) {
-	params := checkParams(ArgonParams{SaltSize: 100, OutputSize: 600})
+	params := checkParams(&ArgonParams{SaltSize: 100, OutputSize: 600})
 	assert.EqualValues(t, maxSaltSize, params.SaltSize)
 	assert.EqualValues(t, maxOutputSize, params.OutputSize)
 	assert.EqualValues(t, minMemory, params.Memory)
@@ -160,7 +156,7 @@ func TestCheckParams(t *testing.T) {
 	assert.EqualValues(t, minParallelism, params.Parallelism)
 	assert.Empty(t, params.Function)
 	// Check Max Parameters
-	params = checkParams(ArgonParams{Parallelism: 100})
+	params = checkParams(&ArgonParams{Parallelism: 100})
 	assert.EqualValues(t, maxParallelism, params.Parallelism)
 }
 func TestCheckHashFormat(t *testing.T) {
@@ -183,7 +179,7 @@ func TestGenerateOutputString(t *testing.T) {
 
 	t.Run("Generate ArgonVariant2i output string", func(t *testing.T) {
 		variant := ArgonVariant2i
-		hash, err := generateHash(testpass, salt, ArgonParams{Time: 2, Memory: 64 * 1024, Parallelism: 4, OutputSize: 32, Function: variant})
+		hash, err := generateHash(testpass, salt, &ArgonParams{Time: 2, Memory: 64 * 1024, Parallelism: 4, OutputSize: 32, Function: variant})
 		assert.NoError(t, err)
 		hashEncoded := base64.StdEncoding.EncodeToString(hash)
 		output := generateOutputString(variant, argon2.Version, 64*1024, 2, 4, saltEncoded, hashEncoded)
@@ -193,7 +189,7 @@ func TestGenerateOutputString(t *testing.T) {
 
 	t.Run("Generate ArgonVariant2id output string", func(t *testing.T) {
 		variant := ArgonVariant2id
-		hash, err := generateHash(testpass, salt, ArgonParams{Time: 2, Memory: 64 * 1024, Parallelism: 4, OutputSize: 32, Function: variant})
+		hash, err := generateHash(testpass, salt, &ArgonParams{Time: 2, Memory: 64 * 1024, Parallelism: 4, OutputSize: 32, Function: variant})
 		assert.NoError(t, err)
 		hashEncoded := base64.StdEncoding.EncodeToString(hash)
 		output := generateOutputString(variant, argon2.Version, 64*1024, 2, 4, saltEncoded, hashEncoded)
@@ -206,12 +202,12 @@ func TestGenerateHash(t *testing.T) {
 	// Test regeneration with expected output
 	salt, _ := base64.StdEncoding.DecodeString("AXLonWF8MSgG515yMlIRSw==")
 	testpass := []byte("testpass")
-	out, err := generateHash(testpass, salt, ArgonParams{Time: 12, Memory: 64 * 1024, Parallelism: 4, OutputSize: 32, Function: ArgonVariant2id})
+	out, err := generateHash(testpass, salt, &ArgonParams{Time: 12, Memory: 64 * 1024, Parallelism: 4, OutputSize: 32, Function: ArgonVariant2id})
 	assert.NoError(t, err)
 	assert.EqualValues(t, "+iExTQDCJnO4fErO61zMAeC24R3utWMk8tW85saXOBU=", base64.StdEncoding.EncodeToString(out))
 
 	// Test invalid function choice
-	hash, err := generateHash(testpass, salt, ArgonParams{Time: 1, Memory: 16 * 1024, Parallelism: 4, OutputSize: 32, Function: "argon2b"})
+	hash, err := generateHash(testpass, salt, &ArgonParams{Time: 1, Memory: 16 * 1024, Parallelism: 4, OutputSize: 32, Function: "argon2b"})
 	assert.EqualError(t, err, ErrFunctionMismatch.Error())
 	assert.Empty(t, hash)
 
@@ -232,7 +228,7 @@ func TestHashAndVerify(t *testing.T) {
 	// Hash & Verify various lengths from 8 chars up to 256 chars with default params
 	for i := 8; i < 256; i *= 8 {
 		pass := fake.Password(8, 256, true, true, true)
-		out, err := Hash(pass)
+		out, err := Hash(pass, nil)
 		assert.NoError(t, err)
 		assert.NotEmpty(t, out)
 		err = Verify(pass, out)
@@ -242,7 +238,7 @@ func TestHashAndVerify(t *testing.T) {
 	// Hash & Verify with Custom Params
 	for i := 8; i < 256; i *= 8 {
 		pass := fake.Password(8, 256, true, true, true)
-		out, err := Hash(pass, ArgonParams{Time: 12, Memory: 64 * 1024, Parallelism: 4, OutputSize: 32, Function: "argon2id"})
+		out, err := Hash(pass, &ArgonParams{Time: 12, Memory: 64 * 1024, Parallelism: 4, OutputSize: 32, Function: "argon2id"})
 		assert.NoError(t, err)
 		assert.NotEmpty(t, out)
 		err = Verify(pass, out)
@@ -252,7 +248,7 @@ func TestHashAndVerify(t *testing.T) {
 }
 
 func TestParseParams(t *testing.T) {
-	expected := ArgonParams{
+	expected := &ArgonParams{
 		Time:        2,
 		Memory:      65536,
 		Parallelism: 4,
@@ -289,6 +285,6 @@ func TestBenchmark(t *testing.T) {
 
 func BenchmarkHash(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		_, _ = Hash("testpass")
+		_, _ = Hash("testpass", nil)
 	}
 }

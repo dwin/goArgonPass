@@ -3,10 +3,6 @@ package argonpass
 import "errors"
 
 var (
-	// ErrCustomParameters indicates the parameters passed to hash function are invalid.
-	// see minimum constants in password.go
-	ErrCustomParameters = errors.New("Parameters passed to hash are invalid")
-
 	// ErrPassphraseInputTooShort indicates the passphrase was less than 8 characters
 	ErrPassphraseInputTooShort = errors.New("Passphrase Input too short, must be >= 8 characters")
 
