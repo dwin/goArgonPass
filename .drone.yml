@@ -15,21 +15,21 @@ steps:
   - name: test-1.13-alpine
     image: golang:1.13-alpine
     commands:
-      - apk add --update bash build-base git
+      - apk add --update bash git
       - go get -u
       - scripts/go_coverage.sh
 
   - name: test-1.14-alpine
     image: golang:1.14-alpine
     commands:
-      - apk add --update bash build-base git
+      - apk add --update bash git
       - go get -u
       - scripts/go_coverage.sh
 
   - name: test-1.15-alpine
     image: golang:1.15-alpine
     commands:
-      - apk add --update bash build-base git
+      - apk add --update bash git
       - go get -u
       - scripts/go_coverage.sh
 
@@ -40,7 +40,7 @@ steps:
       - name: cache
         path: /tmp/cache
     commands:
-      - apk add --update bash build-base git
+      - apk add --update bash git
       - go get -u
       - go test -coverprofile=/tmp/cache/coverage.txt -covermode=atomic ./...
 
