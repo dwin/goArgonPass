@@ -1,7 +1,6 @@
 # goArgonPass
 
 [![GoDoc](https://godoc.org/github.com/dwin/goArgonPass?status.svg)](https://godoc.org/github.com/dwin/goArgonPass)
-[![cover.run](https://cover.run/go/github.com/dwin/goArgonPass.svg?style=flat&tag=golang-1.10)](https://cover.run/go?tag=golang-1.10&repo=github.com%2Fdwin%2FgoArgonPass)
 [![Build Status](https://travis-ci.org/dwin/goArgonPass.svg?branch=master)](https://travis-ci.org/dwin/goArgonPass)
 [![Coverage Status](https://coveralls.io/repos/github/dwin/goArgonPass/badge.svg?branch=master)](https://coveralls.io/github/dwin/goArgonPass?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/dwin/goArgonPass)](https://goreportcard.com/report/github.com/dwin/goArgonPass)
@@ -39,7 +38,7 @@ import (
     "fmt"
     "os"
 
-    "github.com/dwin/goArgonPass"
+    argonpass "github.com/dwin/goArgonPass"
 )
 
 func main() {
@@ -47,7 +46,7 @@ func main() {
     userPassInput := "password"
 
     // Hash with Default Parameters
-    hash, err := argonpass.Hash(userPassInput)
+    hash, err := argonpass.Hash(userPassInput, nil)
     if err != nil {
         // Handle Error
         os.Exit(1)

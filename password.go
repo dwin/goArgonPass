@@ -22,7 +22,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	"golang.org/x/crypto/argon2"
 )
@@ -87,16 +86,16 @@ func NewDefaultParams() *ArgonParams {
 	}
 }
 
-// hashFormatRegExpCompiled is used to verify hash string format
+// hashFormatRegExpCompiled is used to verify hash string format.
 var hashFormatRegExpCompiled = regexp.MustCompile(`[$]argon2(?:id|i)[$]v=\d{1,3}[$]m=\d{3,20},t=\d{1,4},p=\d{1,2}[$][^$]{1,100}[$][^$]{1,768}`)
 
-// ArgonParams control how the Argon2 function creates the digest output
+// ArgonParams control how the Argon2 function creates the digest output.
 type ArgonParams struct {
+	Function    ArgonVariant
 	Time        uint32
 	Memory      uint32
-	Parallelism uint8
 	OutputSize  uint32
-	Function    ArgonVariant
+	Parallelism uint8
 	SaltSize    uint8
 }
 
@@ -109,8 +108,9 @@ func Hash(pass string, customParams *ArgonParams) (string, error) {
 		return "", ErrPassphraseInputTooShort
 	}
 
-	// Check for custom params, if not use default
-	params := new(ArgonParams)
+	// Check for custom params, if not use default.
+	params := new(ArgonParams) // nolint:staticcheck // false positive
+
 	if customParams != nil {
 		params = checkParams(customParams)
 	} else {
@@ -180,7 +180,7 @@ func Verify(pass, hash string) error {
 	// Generate hash for comparison using user input with stored parameters
 	comparisonHash, err := generateHash([]byte(pass), salt, hashParams)
 	if err != nil {
-		return fmt.Errorf("Unable to generate hash for comparison using inputs, error: %s", err)
+		return fmt.Errorf("unable to generate hash for comparison using inputs, error: %w", err)
 	}
 
 	// Compare given hash input to generated hash
@@ -188,10 +188,11 @@ func Verify(pass, hash string) error {
 		// return nil only if supplied hash and computed hash from passphrase match
 		return nil
 	}
+
 	return ErrHashMismatch
 }
 
-// GetParams takes hash sting as input and returns parameters as ArgonParams along with error
+// GetParams takes hash sting as input and returns parameters as ArgonParams along with error.
 func GetParams(hash string) (hashParams *ArgonParams, err error) {
 	// Check valid input
 	if err = checkHashFormat(hash); err != nil {
@@ -215,6 +216,7 @@ func GetParams(hash string) (hashParams *ArgonParams, err error) {
 	if err != nil {
 		return hashParams, ErrDecodingSalt
 	}
+
 	hashParams.SaltSize = uint8(len(salt))
 
 	// Get argon digest size
@@ -222,32 +224,35 @@ func GetParams(hash string) (hashParams *ArgonParams, err error) {
 	if err != nil {
 		return hashParams, ErrDecodingDigest
 	}
+
 	hashParams.OutputSize = uint32(len(decodedHash))
 
-	return
+	return hashParams, nil
 }
 
-// checkHashFormat uses regex to validate hash string pattern and returns error
+// checkHashFormat uses regex to validate hash string pattern and returns error.
 func checkHashFormat(hash string) error {
 	// Check valid input
 	if !hashFormatRegExpCompiled.MatchString(hash) {
 		return ErrInvalidHashFormat
 	}
+
 	return nil
 }
 
-// generateSalt uses int input to return a random a salt for use in crypto operations
+// generateSalt uses int input to return a random a salt for use in crypto operations.
 func generateSalt(saltLen uint8) ([]byte, error) {
 	salt := make([]byte, saltLen)
 	if _, err := rand.Read(salt); err != nil {
 		return nil, err
 	}
+
 	return salt, nil
 }
 
-// generateHash takes passphrase and salt as bytes with parameters to provide Argon2 digest output
+// generateHash takes passphrase and salt as bytes with parameters to provide Argon2 digest output.
 func generateHash(pass, salt []byte, params *ArgonParams) ([]byte, error) {
-	switch params.Function {
+	switch params.Function { // nolint:exhaustive // false positive
 	case ArgonVariant2i:
 		return argon2.Key(pass, salt, params.Time, params.Memory, params.Parallelism, params.OutputSize), nil
 	case ArgonVariant2id:
@@ -261,7 +266,7 @@ func generateOutputString(argonVariant ArgonVariant, version int, memory, time u
 	return fmt.Sprintf("$%s$v=%v$m=%v,t=%v,p=%v$%s$%s", argonVariant, version, memory, time, parallelism, salt, hash)
 }
 
-// parseParams takes parameters from a slice of hash string and returns ArgonParams
+// parseParams takes parameters from a slice of hash string and returns ArgonParam.
 func parseParams(inputParams string) (out *ArgonParams, err error) {
 	// expected format: m=65536,t=2,p=4
 	part := strings.Split(inputParams, ",")
@@ -270,10 +275,12 @@ func parseParams(inputParams string) (out *ArgonParams, err error) {
 	if err != nil {
 		return out, ErrParseMemory
 	}
+
 	timeCost, err := strconv.Atoi(strings.TrimPrefix(part[1], "t="))
 	if err != nil {
 		return out, ErrParseTime
 	}
+
 	parallelism, err := strconv.Atoi(strings.TrimPrefix(part[2], "p="))
 	if err != nil {
 		return out, ErrParseParallelism
@@ -286,21 +293,25 @@ func parseParams(inputParams string) (out *ArgonParams, err error) {
 	}, nil
 }
 
-// checkParams verifies that parameters fall within min and max allowed values
+// checkParams verifies that parameters fall within min and max allowed values.
 func checkParams(params *ArgonParams) *ArgonParams {
 	// Enforce Minimum Params
 	if params.SaltSize < minSaltSize {
 		params.SaltSize = minSaltSize
 	}
+
 	if params.Time < minTime {
 		params.Time = minTime
 	}
+
 	if params.Memory < minMemory {
 		params.Memory = minMemory
 	}
+
 	if params.Parallelism < minParallelism {
 		params.Parallelism = minParallelism
 	}
+
 	if params.OutputSize < minOutputSize {
 		params.OutputSize = minOutputSize
 	}
@@ -308,25 +319,14 @@ func checkParams(params *ArgonParams) *ArgonParams {
 	if params.SaltSize > maxSaltSize {
 		params.SaltSize = maxSaltSize
 	}
+
 	if params.OutputSize > maxOutputSize {
 		params.OutputSize = maxOutputSize
 	}
+
 	if params.Parallelism > maxParallelism {
 		params.Parallelism = maxParallelism
 	}
 
 	return params
-}
-
-// Benchmark takes ArgonParams and returns the number of seconds elapsed as a float64 and error
-func Benchmark(params *ArgonParams) (elapsed float64, err error) {
-	pass := "benchmarkpass"
-	start := time.Now()
-
-	salt, err := generateSalt(params.SaltSize)
-	_, err = generateHash([]byte(pass), salt, params)
-
-	t := time.Now()
-	dur := t.Sub(start)
-	return dur.Seconds(), err
 }
