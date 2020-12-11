@@ -271,17 +271,17 @@ func parseParams(inputParams string) (out *ArgonParams, err error) {
 	// expected format: m=65536,t=2,p=4
 	part := strings.Split(inputParams, ",")
 
-	mem, err := strconv.Atoi(strings.TrimPrefix(part[0], "m="))
+	mem, err := strconv.ParseUint(strings.TrimPrefix(part[0], "m="), 10, 32)
 	if err != nil {
 		return out, ErrParseMemory
 	}
 
-	timeCost, err := strconv.Atoi(strings.TrimPrefix(part[1], "t="))
+	timeCost, err := strconv.ParseUint(strings.TrimPrefix(part[1], "t="), 10, 32)
 	if err != nil {
 		return out, ErrParseTime
 	}
 
-	parallelism, err := strconv.Atoi(strings.TrimPrefix(part[2], "p="))
+	parallelism, err := strconv.ParseUint(strings.TrimPrefix(part[2], "p="), 10, 8)
 	if err != nil {
 		return out, ErrParseParallelism
 	}

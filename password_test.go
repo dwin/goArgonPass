@@ -3,6 +3,7 @@ package argonpass
 import (
 	"encoding/base64"
 	"fmt"
+	"math"
 	"math/rand"
 	"strings"
 	"testing"
@@ -249,15 +250,22 @@ func TestParseParams(t *testing.T) {
 		Parallelism: 4,
 	}
 	params, err := parseParams("m=65536,t=2,p=4")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expected, params)
 
 	// Test with bad params, these should not happen in regular use since these would fail regex
 	_, err = parseParams("m=65.536,t=2,p=4")
-	assert.EqualError(t, err, ErrParseMemory.Error())
+	require.EqualError(t, err, ErrParseMemory.Error())
 	_, err = parseParams("m=65536,t=2b,p=4")
-	assert.EqualError(t, err, ErrParseTime.Error())
+	require.EqualError(t, err, ErrParseTime.Error())
 	_, err = parseParams("m=65536,t=2,p=4h")
+	require.EqualError(t, err, ErrParseParallelism.Error())
+	// Test out of bounds integers
+	_, err = parseParams(fmt.Sprintf("m=%d,t=2,p=4", math.MaxUint32+1000))
+	assert.EqualError(t, err, ErrParseMemory.Error())
+	_, err = parseParams(fmt.Sprintf("m=65536,t=%d,p=4", math.MaxUint32+10000))
+	assert.EqualError(t, err, ErrParseTime.Error())
+	_, err = parseParams(fmt.Sprintf("m=65536,t=2,p=%d", math.MaxUint8+10000))
 	assert.EqualError(t, err, ErrParseParallelism.Error())
 
 	fmt.Println(" - " + t.Name() + " complete - ")

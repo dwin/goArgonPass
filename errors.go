@@ -21,15 +21,15 @@ var (
 
 	// ErrParseTime indicates there was an issue parsing the time parameter from the hash
 	// input string, possibly was not expected integer value.
-	ErrParseTime = errors.New("unable to parse time parameter")
+	ErrParseTime = errors.New("unable to parse time parameter or invalid integer for bitsize")
 
 	// ErrParseMemory indicates there was an issue parsing the memory parameter from the hash
 	// input string, possibly was not expected integer value.
-	ErrParseMemory = errors.New("unable to parse memory parameter")
+	ErrParseMemory = errors.New("unable to parse memory parameter or invalid integer for bitsize")
 
 	// ErrParseParallelism indicates there was an issue parsing the parallelism parameter from the hash
 	// input string, possibly was not expected integer value.
-	ErrParseParallelism = errors.New("unable to parse parallelism/threads parameter")
+	ErrParseParallelism = errors.New("unable to parse parallelism/threads parameter or invalid integer for bitsize")
 
 	// ErrHashMismatch indicates the Argon2 digest regenerated using the hash input string salt
 	// and user password input did not produce a matching value. Passphrase input does not match
