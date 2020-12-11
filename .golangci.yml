@@ -1,0 +1,51 @@
+linters-settings:
+  errcheck:
+    # report about not checking of errors in type assetions: `a := b.(MyStruct)`;
+    # default is false: such cases aren't reported by default.
+    check-type-assertions: true
+    # report about assignment of errors to blank identifier: `num, _ := strconv.Atoi(numStr)`;
+    # default is false: such cases aren't reported by default.
+    check-blank: true
+  lll:
+    # max line length, lines longer will be reported.
+    # '\t' is counted as 1 character by default, and can be changed with the tab-width option
+    line-length: 180
+    # tab width in spaces. Default to 1.
+    tab-width: 1
+  govet:
+    check-shadowing: true
+  golint:
+    min-confidence: 0
+  gocyclo:
+    min-complexity: 30
+  maligned:
+    suggest-new: true
+  dupl:
+    threshold: 50
+  goconst:
+    min-len: 2
+    min-occurrences: 3
+
+  misspell:
+    locale: US
+
+  goimports:
+    local-prefixes: github.com/golangci/golangci-lint
+  gocritic:
+    enabled-tags:
+      - performance
+      - style
+      - experimental
+    disabled-checks:
+      - wrapperFunc
+
+linters:
+  enable-all: true
+  disable:
+    - gochecknoglobals
+    - testpackage
+
+run:
+  modules-download-mode: vendor
+  skip-dirs:
+    - example

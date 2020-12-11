@@ -9,20 +9,31 @@ steps:
   - name: build-alpine_latest
     image: golang:alpine
     pull: always
+    environment:
+      GOFLAGS: -mod=readonly
     commands:
       - go build -race -v .
 
-  - name: test-1.11-alpine
-    image: golang:1.11-alpine
+  - name: test-1.13-alpine
+    image: golang:1.13-alpine
     commands:
-      - apk add --update bash build-base
-      - go test ./...
+      - apk add --update bash build-base git
+      - go get
+      - scripts/go_coverage.sh
 
-  - name: test-1.12-alpine
-    image: golang:1.12-alpine3.9
+  - name: test-1.14-alpine
+    image: golang:1.14-alpine
     commands:
-      - apk add --update bash build-base
-      - go test ./...
+      - apk add --update bash build-base git
+      - go get
+      - scripts/go_coverage.sh
+
+  - name: test-1.15-alpine
+    image: golang:1.15-alpine
+    commands:
+      - apk add --update bash build-base git
+      - go get
+      - scripts/go_coverage.sh
 
   - name: test-alpine_latest
     image: golang:alpine
@@ -31,7 +42,8 @@ steps:
       - name: cache
         path: /tmp/cache
     commands:
-      - apk add --update bash build-base
+      - apk add --update bash build-base git
+      - go get
       - go test -coverprofile=/tmp/cache/coverage.txt -covermode=atomic ./...
 
   - name: coverage

@@ -1,18 +1,19 @@
 # goArgonPass
 
 [![GoDoc](https://godoc.org/github.com/dwin/goArgonPass?status.svg)](https://godoc.org/github.com/dwin/goArgonPass)
-[![cover.run](https://cover.run/go/github.com/dwin/goArgonPass.svg?style=flat&tag=golang-1.10)](https://cover.run/go?tag=golang-1.10&repo=github.com%2Fdwin%2FgoArgonPass)
-[![Build Status](https://travis-ci.org/dwin/goArgonPass.svg?branch=master)](https://travis-ci.org/dwin/goArgonPass)
-[![Coverage Status](https://coveralls.io/repos/github/dwin/goArgonPass/badge.svg?branch=master)](https://coveralls.io/github/dwin/goArgonPass?branch=master)
-[![Go Report Card](https://goreportcard.com/badge/github.com/dwin/goArgonPass)](https://goreportcard.com/report/github.com/dwin/goArgonPass)
-
-Master:
-[![Build Status](https://drone.github.dlsmi.com/api/badges/dwin/goArgonPass/status.svg)](https://drone.github.dlsmi.com/dwin/goArgonPass)
 [![codecov](https://codecov.io/gh/dwin/goArgonPass/branch/master/graph/badge.svg)](https://codecov.io/gh/dwin/goArgonPass)
+[![Go Report Card](https://goreportcard.com/badge/github.com/dwin/goArgonPass)](https://goreportcard.com/report/github.com/dwin/goArgonPass)
+[![CodeFactor](https://www.codefactor.io/repository/github/dwin/goargonpass/badge)](https://www.codefactor.io/repository/github/dwin/goargonpass)
 
-Dev:
-[![Build Status](https://drone.github.dlsmi.com/api/badges/dwin/goArgonPass/status.svg?ref=/refs/heads/dev)](https://drone.github.dlsmi.com/dwin/goArgonPass)
-[![codecov](https://codecov.io/gh/dwin/goArgonPass/branch/dev/graph/badge.svg)](https://codecov.io/gh/dwin/goArgonPass)
+Travis: 
+
+[![Travis Build Status](https://travis-ci.org/dwin/goArgonPass.svg?branch=master)](https://travis-ci.org/dwin/goArgonPass)
+
+Drone: 
+
+[![Drone Build Status](https://drone.github.dlsmi.com/api/badges/dwin/goArgonPass/status.svg)](https://drone.github.dlsmi.com/dwin/goArgonPass)
+
+
 
 **_All hashing and crypto is done by Go library packages. This is only a utility package to make the process described easier._**
 
@@ -39,7 +40,7 @@ import (
     "fmt"
     "os"
 
-    "github.com/dwin/goArgonPass"
+    argonpass "github.com/dwin/goArgonPass"
 )
 
 func main() {
@@ -47,7 +48,7 @@ func main() {
     userPassInput := "password"
 
     // Hash with Default Parameters
-    hash, err := argonpass.Hash(userPassInput)
+    hash, err := argonpass.Hash(userPassInput, nil)
     if err != nil {
         // Handle Error
         os.Exit(1)
