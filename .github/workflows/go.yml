@@ -30,7 +30,7 @@ jobs:
       uses: golangci/golangci-lint-action@v1.2.1
       with:
         # version of golangci-lint to use in form of v1.2.3
-        version: v1.31.0
+        version: v1.31
         # golangci-lint command line arguments
         args: -c .golangci.yml
         # golangci-lint working directory, default is project root
