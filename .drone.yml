@@ -11,13 +11,6 @@ steps:
     pull: always
     commands:
       - go build -race -v .
-
-  - name: test-1.12-alpine
-    image: golang:1.12-alpine
-    commands:
-      - apk add --update bash build-base git
-      - go get -u
-      - scripts/go_coverage.sh
   
   - name: test-1.13-alpine
     image: golang:1.13-alpine
