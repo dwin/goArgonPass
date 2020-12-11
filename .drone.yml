@@ -13,7 +13,7 @@ steps:
       GOFLAGS: -mod=readonly
     commands:
       - go build -race -v .
-  
+
   - name: test-1.13-alpine
     image: golang:1.13-alpine
     commands:
