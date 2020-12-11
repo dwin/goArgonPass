@@ -11,6 +11,12 @@ steps:
     pull: always
     commands:
       - go build -race -v .
+
+  - name: lint
+    image: golangci/golangci-lint:v1.31.0-alpine
+    pull: always
+    commands:
+      - golangci-lint run -c .golangci.yml --deadline=5m
   
   - name: test-1.13-alpine
     image: golang:1.13-alpine
