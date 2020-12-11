@@ -9,6 +9,8 @@ steps:
   - name: build-alpine_latest
     image: golang:alpine
     pull: always
+    environment:
+      GOFLAGS: -mod=readonly
     commands:
       - go build -race -v .
 
