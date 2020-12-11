@@ -156,8 +156,9 @@ func TestCheckHashFormat(t *testing.T) {
 	fmt.Println(" - " + t.Name() + " complete - ")
 }
 
-func generateTestPassword(len int) (out string) {
-	for i := 0; i < 120; i++ {
+func generateTestPassword(length int) (out string) {
+	charSet := "abcdedfghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*()_+?"
+	for i := 0; i < length; i++ {
 		random := rand.Intn(len(charSet))
 		randomChar := charSet[random]
 		out += string(randomChar)
@@ -173,9 +174,7 @@ func TestGenerateOutputString(t *testing.T) {
 
 	saltEncoded := base64.StdEncoding.EncodeToString(salt)
 
-	charSet := "abcdedfghijklmnopqrstABCDEFGHIJKLMNOP!@#$%^&*()_+?"
-
-	testpass := generateTestPassword(80)
+	testpass := []byte(generateTestPassword(80))
 
 	variants := []ArgonVariant{ArgonVariant2i, ArgonVariant2id}
 
