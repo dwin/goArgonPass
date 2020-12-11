@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/dwin/goArgonPass"
+	argonpass "github.com/dwin/goArgonPass"
 )
 
 func main() {
 	// Obtain user password from form or other input
 	userPassInput := "password"
 	// Custom Parameter configuration
-	customParams := argonpass.ArgonParams{
+	customParams := &argonpass.ArgonParams{
 		Time:        3,
 		Memory:      512,
 		Parallelism: 2,
@@ -20,7 +20,7 @@ func main() {
 	}
 
 	// Hash with Default Parameters
-	hash, err := argonpass.Hash(userPassInput)
+	hash, err := argonpass.Hash(userPassInput, nil)
 	if err != nil {
 		// Handle Error
 		os.Exit(1)

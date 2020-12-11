@@ -37,16 +37,26 @@ const (
 	ArgonVariant2id ArgonVariant = "argon2id"
 )
 
+// Security levels from bits.
+const (
+	Sec128b = 128 >> 3 // Until year 2022
+	Sec192b = 192 >> 3
+	Sec224b = 224 >> 3
+	Sec256b = 256 >> 3
+	Sec384b = 384 >> 3
+	Sec512b = 512 >> 3
+)
+
 const (
 	currentVersion = argon2.Version
 	minPassLength  = 8
-	minSaltSize    = 8
-	maxSaltSize    = 64
+	minSaltSize    = Sec128b
+	maxSaltSize    = Sec512b
 	minTime        = 1
 	minMemory      = 1 << 10
 	minParallelism = 1
-	minOutputSize  = 16 // minimum Argon2 digest output size only
-	maxOutputSize  = 512
+	minOutputSize  = Sec128b // minimum Argon2 digest output size only
+	maxOutputSize  = Sec512b
 	maxParallelism = 64
 )
 
@@ -56,23 +66,25 @@ const (
 	// DefaultParallelism ...
 	DefaultParallelism = 4
 	// DefaultOutputSize ...
-	DefaultOutputSize = 32
+	DefaultOutputSize = Sec128b
 	// DefaultFunction ...
 	DefaultFunction = ArgonVariant2id
 	// DefaultSaltSize ...
-	DefaultSaltSize = 8
+	DefaultSaltSize = Sec128b
 	// DefaultTime ...
 	DefaultTime = 1
 )
 
-// defaultParams are the parameters used if none are provided to Hash function
-var defaultParams = ArgonParams{
-	Time:        DefaultTime,
-	Memory:      DefaultMemory,
-	Parallelism: DefaultParallelism,
-	OutputSize:  DefaultOutputSize,
-	Function:    DefaultFunction,
-	SaltSize:    DefaultSaltSize,
+// NewDefaultParams returns the parameters used by default.
+func NewDefaultParams() *ArgonParams {
+	return &ArgonParams{
+		Time:        DefaultTime,
+		Memory:      DefaultMemory,
+		Parallelism: DefaultParallelism,
+		OutputSize:  DefaultOutputSize,
+		Function:    DefaultFunction,
+		SaltSize:    DefaultSaltSize,
+	}
 }
 
 // hashFormatRegExpCompiled is used to verify hash string format
@@ -88,22 +100,21 @@ type ArgonParams struct {
 	SaltSize    uint8
 }
 
-// Hash generates a argon2id hash of the input pass string with default settings
-// and returns the output in the specified string format and error value
-func Hash(pass string, customParams ...ArgonParams) (string, error) {
+// Hash generates a argon2id hash of the input pass string and returns the
+// output in the specified string format and error value.
+// Whether 'ArgonParams' is null, then it used default settings.
+func Hash(pass string, customParams *ArgonParams) (string, error) {
 	// Check input pass length
 	if len(pass) < minPassLength {
 		return "", ErrPassphraseInputTooShort
 	}
+
 	// Check for custom params, if not use default
-	var params ArgonParams
-	switch len(customParams) {
-	case 0:
-		params = defaultParams
-	case 1:
-		params = checkParams(customParams[0])
-	default:
-		return "", ErrCustomParameters
+	params := new(ArgonParams)
+	if customParams != nil {
+		params = checkParams(customParams)
+	} else {
+		params = NewDefaultParams()
 	}
 
 	// Generate random salt
@@ -181,7 +192,7 @@ func Verify(pass, hash string) error {
 }
 
 // GetParams takes hash sting as input and returns parameters as ArgonParams along with error
-func GetParams(hash string) (hashParams ArgonParams, err error) {
+func GetParams(hash string) (hashParams *ArgonParams, err error) {
 	// Check valid input
 	if err = checkHashFormat(hash); err != nil {
 		return
@@ -235,7 +246,7 @@ func generateSalt(saltLen uint8) ([]byte, error) {
 }
 
 // generateHash takes passphrase and salt as bytes with parameters to provide Argon2 digest output
-func generateHash(pass, salt []byte, params ArgonParams) ([]byte, error) {
+func generateHash(pass, salt []byte, params *ArgonParams) ([]byte, error) {
 	switch params.Function {
 	case ArgonVariant2i:
 		return argon2.Key(pass, salt, params.Time, params.Memory, params.Parallelism, params.OutputSize), nil
@@ -251,7 +262,7 @@ func generateOutputString(argonVariant ArgonVariant, version int, memory, time u
 }
 
 // parseParams takes parameters from a slice of hash string and returns ArgonParams
-func parseParams(inputParams string) (out ArgonParams, err error) {
+func parseParams(inputParams string) (out *ArgonParams, err error) {
 	// expected format: m=65536,t=2,p=4
 	part := strings.Split(inputParams, ",")
 
@@ -267,15 +278,16 @@ func parseParams(inputParams string) (out ArgonParams, err error) {
 	if err != nil {
 		return out, ErrParseParallelism
 	}
-	out.Memory = uint32(mem)
-	out.Time = uint32(timeCost)
-	out.Parallelism = uint8(parallelism)
 
-	return out, err
+	return &ArgonParams{
+		Memory:      uint32(mem),
+		Time:        uint32(timeCost),
+		Parallelism: uint8(parallelism),
+	}, nil
 }
 
 // checkParams verifies that parameters fall within min and max allowed values
-func checkParams(params ArgonParams) ArgonParams {
+func checkParams(params *ArgonParams) *ArgonParams {
 	// Enforce Minimum Params
 	if params.SaltSize < minSaltSize {
 		params.SaltSize = minSaltSize
@@ -307,7 +319,7 @@ func checkParams(params ArgonParams) ArgonParams {
 }
 
 // Benchmark takes ArgonParams and returns the number of seconds elapsed as a float64 and error
-func Benchmark(params ArgonParams) (elapsed float64, err error) {
+func Benchmark(params *ArgonParams) (elapsed float64, err error) {
 	pass := "benchmarkpass"
 	start := time.Now()
 
