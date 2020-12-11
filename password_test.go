@@ -3,10 +3,10 @@ package argonpass
 import (
 	"encoding/base64"
 	"fmt"
+	"math/rand"
 	"strings"
 	"testing"
 
-	"github.com/icrowley/fake"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/argon2"
@@ -156,6 +156,16 @@ func TestCheckHashFormat(t *testing.T) {
 	fmt.Println(" - " + t.Name() + " complete - ")
 }
 
+func generateTestPassword(len int) (out string) {
+	for i := 0; i < 120; i++ {
+		random := rand.Intn(len(charSet))
+		randomChar := charSet[random]
+		out += string(randomChar)
+	}
+
+	return out
+}
+
 func TestGenerateOutputString(t *testing.T) {
 	// Test Data
 	salt, err := generateSalt(8)
@@ -163,7 +173,9 @@ func TestGenerateOutputString(t *testing.T) {
 
 	saltEncoded := base64.StdEncoding.EncodeToString(salt)
 
-	testpass := []byte(fake.Password(8, 256, true, true, true))
+	charSet := "abcdedfghijklmnopqrstABCDEFGHIJKLMNOP!@#$%^&*()_+?"
+
+	testpass := generateTestPassword(80)
 
 	variants := []ArgonVariant{ArgonVariant2i, ArgonVariant2id}
 
@@ -211,7 +223,7 @@ func TestGenerateSalt(t *testing.T) {
 func TestHashAndVerify(t *testing.T) {
 	// Hash & Verify various lengths from 8 chars up to 256 chars with default params
 	for i := 8; i < 256; i *= 8 {
-		pass := fake.Password(8, 256, true, true, true)
+		pass := generateTestPassword(80)
 		out, err := Hash(pass, nil)
 		assert.NoError(t, err)
 		assert.NotEmpty(t, out)
@@ -221,7 +233,7 @@ func TestHashAndVerify(t *testing.T) {
 
 	// Hash & Verify with Custom Params
 	for i := 8; i < 256; i *= 8 {
-		pass := fake.Password(8, 256, true, true, true)
+		pass := generateTestPassword(80)
 		out, err := Hash(pass, &ArgonParams{Time: 12, Memory: 64 * 1024, Parallelism: 4, OutputSize: 32, Function: "argon2id"})
 		assert.NoError(t, err)
 		assert.NotEmpty(t, out)
